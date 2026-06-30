@@ -1,5 +1,5 @@
 // ===============================================
-// Bicep template for LAB532
+// Bicep template for Foundry IQ knowledge bases
 // Creates: Azure AI Search, Microsoft Foundry (with model deployments), Fabric capacity
 // ===============================================
 
@@ -16,7 +16,7 @@ param fabricAdminUpn string = ''
 param spPrincipalId string = ''
 
 @description('The name prefix for all resources')
-param resourcePrefix string = 'lab532'
+param resourcePrefix string = 'fiq'
 
 @description('The location where all resources will be deployed')
 param location string

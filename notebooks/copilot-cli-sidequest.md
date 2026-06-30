@@ -36,7 +36,7 @@ Added server "zava-kb"
 
 zava-kb
   Type: http
-  URL: https://lab532-search-2ijs67lu3y3ty.search.windows.net/knowledgebases/multisource-search-knowledge-base/mcp?api-version=2026-05-01-preview
+  URL: https://fiq-search-2ijs67lu3y3ty.search.windows.net/knowledgebases/multisource-search-knowledge-base/mcp?api-version=2026-05-01-preview
   Headers:
     api-key: ***
   Tools: * (all)

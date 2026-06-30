@@ -11,7 +11,7 @@
 
 ###  본인 환경에서 시작하기
 
-[./deploy_yourself.md 가이드](./deploy_yourself.md)의 단계를 따르세요.
+[./deploy_yourself.md](./deploy_yourself.md) 가이드의 단계를 따르세요.
 
 ### 🧠 학습 성과
 
