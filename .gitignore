@@ -4,7 +4,7 @@ Template files will not be tracked by git.
 *.bak
 *.tmp
 
-# Source materials folder — contents excluded, README tracked
+# Source materials folder - contents excluded, README tracked
 _remove-before-publish/*
 !_remove-before-publish/README.md
 

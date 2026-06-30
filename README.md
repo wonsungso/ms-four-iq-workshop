@@ -7,7 +7,7 @@
 > [!NOTE]
 > 이 저장소는 [microsoft/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq](https://github.com/wonsungso/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq) 저장소를 기반으로 작성되었으며, 문서와 노트북 콘텐츠를 한국어로 로컬라이징한 버전입니다. 원본 콘텐츠의 모든 권리는 원저작자에게 있습니다.
 
-## 🔥 LAB532: 에이전트형 지식 베이스 구축 — Azure AI Search로 한 단계 진화한 RAG
+## 🔥 LAB532: 에이전트형 지식 베이스 구축 - Azure AI Search로 한 단계 진화한 RAG
 
 ### 세션 소개
 

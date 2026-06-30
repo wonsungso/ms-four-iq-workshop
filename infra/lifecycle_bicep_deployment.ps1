@@ -1,4 +1,4 @@
-# Lifecycle — Write a self-contained background script that handles everything
+# Lifecycle - Write a self-contained background script that handles everything
 # after az login: deploy, poll, fetch outputs, run setup.
 # This lets the Skillable lifecycle action exit quickly (< 600s).
 

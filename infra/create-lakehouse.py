@@ -92,7 +92,7 @@ def get_credential():
     """Get the credential used for Fabric API and OneLake calls."""
     global _CREDENTIAL
     if _CREDENTIAL is None:
-        # Always use DefaultAzureCredential — it picks up AZURE_CLIENT_ID,
+        # Always use DefaultAzureCredential - it picks up AZURE_CLIENT_ID,
         # AZURE_CLIENT_SECRET, AZURE_TENANT_ID env vars (EnvironmentCredential)
         # which work in headless/subprocess environments like Skillable VMs.
         _CREDENTIAL = DefaultAzureCredential()
@@ -182,7 +182,7 @@ def resolve_capacity_id(capacity_id_or_arm: str) -> str:
     if "/" not in capacity_id_or_arm:
         return capacity_id_or_arm
 
-    # It's an ARM resource ID — look up the Fabric GUID via the capacities API
+    # It's an ARM resource ID - look up the Fabric GUID via the capacities API
     log_message("Resolving ARM capacity ID to Fabric GUID...")
     url = f"{FABRIC_API_BASE}/capacities"
     resp = fabric_get(url)

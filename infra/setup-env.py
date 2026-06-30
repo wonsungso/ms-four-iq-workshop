@@ -1,7 +1,7 @@
 """
 Write all environment variables needed by notebooks into the repo root .env file.
 Fetches API keys (not available as Bicep outputs) via the management REST API
-using AzureDeveloperCliCredential (azd token) — no az CLI required.
+using AzureDeveloperCliCredential (azd token) - no az CLI required.
 """
 import os
 from pathlib import Path

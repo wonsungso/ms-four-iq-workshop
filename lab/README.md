@@ -23,11 +23,11 @@
 
 먼저 **notebooks/** 폴더를 열고 **part1-standard-foundry-iq-kb.ipynb** 부터 시작하세요. 5개의 노트북을 순서대로 진행합니다.
 
-1. **part1-standard-foundry-iq-kb.ipynb** — 복원된 HR 및 헬스 검색 인덱스로 멀티 소스 지식 베이스 구축
-2. **part2-search-mcp-kb.ipynb** — MCP 지식 소스를 통해 Web IQ 추가
-3. **part3-fabric-iq-to-kb.ipynb** — Fabric 온톨로지 지식 소스를 통해 Fabric IQ 추가
-4. **part4-work-iq-to-kb.ipynb** — Work IQ를 일급 지식 소스로 추가
-5. **part5-work-iq-fabric-iq-to-kb.ipynb** — Work IQ와 Fabric IQ를 하나의 지식 베이스에 결합
+1. **part1-standard-foundry-iq-kb.ipynb** - 복원된 HR 및 헬스 검색 인덱스로 멀티 소스 지식 베이스 구축
+2. **part2-search-mcp-kb.ipynb** - MCP 지식 소스를 통해 Web IQ 추가
+3. **part3-fabric-iq-to-kb.ipynb** - Fabric 온톨로지 지식 소스를 통해 Fabric IQ 추가
+4. **part4-work-iq-to-kb.ipynb** - Work IQ를 일급 지식 소스로 추가
+5. **part5-work-iq-fabric-iq-to-kb.ipynb** - Work IQ와 Fabric IQ를 하나의 지식 베이스에 결합
 
 5개의 노트북을 모두 완료한 후 이 페이지로 돌아와 **Next >** 를 선택하면 마무리 및 요약 섹션을 볼 수 있습니다.
 
