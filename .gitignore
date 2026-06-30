@@ -1,0 +1,29 @@
+# build26-repo-template
+
+Template files will not be tracked by git.
+*.bak
+*.tmp
+
+# Source materials folder — contents excluded, README tracked
+_remove-before-publish/*
+!_remove-before-publish/README.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files (except .vscode/mcp.json which we want)
+.idea/
+*.swp
+*.swo
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# Dependencies (if applicable)
+node_modules/
+__pycache__/
+*.pyc
+.venv/

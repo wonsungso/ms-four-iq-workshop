@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: lab532-foundry-iq-knowledge-bases
+metadata:
+  template: lab532-foundry-iq-knowledge-bases
+hooks:
+  postprovision:
+    posix:
+      shell: sh
+      run: infra/hooks/postprovision.sh
+      interactive: true
+    windows:
+      shell: pwsh
+      run: infra/hooks/postprovision.ps1
+      interactive: true
+      
