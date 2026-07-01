@@ -94,7 +94,7 @@ def get_credential():
     if _CREDENTIAL is None:
         # Always use DefaultAzureCredential - it picks up AZURE_CLIENT_ID,
         # AZURE_CLIENT_SECRET, AZURE_TENANT_ID env vars (EnvironmentCredential)
-        # which work in headless/subprocess environments like Skillable VMs.
+        # which work in headless/subprocess environments (e.g., CI or hosted VMs).
         _CREDENTIAL = DefaultAzureCredential()
     return _CREDENTIAL
 

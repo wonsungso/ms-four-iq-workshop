@@ -24,6 +24,7 @@
 - Azure RBAC 역할 할당
 
 ## 빠른 시작
+VS Code의 Terminal에서 아래 명령들을 실행하세요.
 
 ### 1. 저장소 클론
 
@@ -39,6 +40,12 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
+> **참고 (Windows):** Windows에서는 `venv`가 실행 파일을 `bin/`이 아닌 `Scripts/`에 생성합니다.
+>
+> ```bash
+> source .venv/Scripts/activate
+> ```
+
 ### 3. azd로 배포
 
 ```bash
@@ -53,11 +60,11 @@ azd up
 - 검색 인덱스 생성 및 샘플 데이터 업로드
 - Zava DIY 데이터셋과 온톨로지로 Fabric Lakehouse 설정
 
-> **참고:** 이메일 시딩(Part 4 - Work IQ를 위해 호스팅된 Skillable 워크샵에서 사용)은 `Mail.Send` 애플리케이션 권한이 있는 서비스 주체가 필요하며 직접 배포 시에는 **실행되지 않습니다**. Part 4에서는 대신 본인의 Mail 데이터를 사용합니다.
+> **참고:** 이메일 시딩(Part 4 - Work IQ용)은 `Mail.Send` 애플리케이션 권한이 있는 서비스 주체가 필요하며 직접 배포 시에는 **실행되지 않습니다**. Part 4에서는 대신 본인의 Mail 데이터를 사용합니다.
 
 ### 4. 워크샵 시작
 
-VS Code에서 [notebooks](./notebooks) 폴더를 열고 **`part1-standard-foundry-iq-kb.ipynb` 부터 시작**하세요.
+VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundry-iq-kb.ipynb](./notebooks/part1-standard-foundry-iq-kb.ipynb) 부터 시작**하세요.
 
 ## 정리
 

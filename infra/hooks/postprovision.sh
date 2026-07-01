@@ -20,7 +20,7 @@ if [ -n "$FABRIC_CAPACITY_ID" ]; then
 fi
 
 # Note: Email seeding (seed-emails.ps1) requires a service principal with
-# Mail.Send application permission and is only used in the Skillable hosted lab.
+# Mail.Send application permission and is not run as part of self-deploy.
 # For self-deploy, Part 4 (Work IQ) will use your own mailbox data.
 
 echo "Postprovision complete! If there were no errors, you can open notebooks/ to start the lab."
