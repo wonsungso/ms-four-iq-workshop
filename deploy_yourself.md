@@ -6,8 +6,20 @@
 
 - 리소스를 생성할 수 있는 충분한 권한이 있는 **Azure 구독**
 - **GitHub 계정** (GitHub Codespaces 사용)
+- **Microsoft Fabric Free Plan 가입** (Fabric Capacity 배포에 필요)
 
 > 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#로컬-환경에서-배포하기) 섹션의 추가 요구 사항을 참고하세요.
+
+### Microsoft Fabric Free Plan 가입
+
+테넌트/계정이 Microsoft Fabric에 가입되어 있지 않으면 Fabric Capacity 리소스 배포 시 `Unauthorized` 오류가 발생합니다. `azd up`을 실행하기 **전에** 아래 절차로 먼저 가입하세요.
+
+1. [https://app.fabric.microsoft.com/](https://app.fabric.microsoft.com/) 에 접속해 로그인합니다
+2. 안내에 따라 이메일을 입력하고 Microsoft Fabric free 계정 가입을 완료합니다
+<img src="img/signup_fabric.png" alt="Microsoft Fabric Free Plan 가입 화면" width="400"/>
+
+3. 아래와 같이 "세부 정보 확인" 단계가 뜨면 가입이 완료된 것입니다. **시작** 버튼을 클릭하세요
+<img src="img/signup_fabric_2.png" alt="Microsoft Fabric Free Plan 가입 완료 화면" width="400"/>
 
 ### 필요한 Azure 권한
 
@@ -38,8 +50,16 @@
 ### 2. azd로 배포
 
 ```bash
-azd auth login
+azd auth login --use-device-code
 azd up
+```
+
+`azd up`을 처음 실행하면 각종 도구 설치 후 아래와 같이 환경 설정/배포 관련 옵션을 입력해주세요 
+
+```text
+? Enter a unique environment name: [Type ? for hint]  : <alias>-<날짜>
+? Enter a value for the 'location' infrastructure parameter:: 52. (US) East US 2 (eastus2)
+? Enter a value for the 'location' infrastructure parameter:: rg-<alias>-<날짜>
 ```
 
 이 명령은 다음을 수행합니다.

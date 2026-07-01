@@ -10,6 +10,9 @@
     },
     "deployFabricCapacity": {
       "value": "${DEPLOY_FABRIC_CAPACITY=true}"
+    },
+    "fabricAdminUpn": {
+      "value": "${FABRIC_ADMIN_UPN}"
     }
   }
 }
