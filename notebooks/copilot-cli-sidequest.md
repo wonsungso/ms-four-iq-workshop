@@ -6,7 +6,7 @@
 
 https://github.com/enterprises/skillable-events/sso 에서 로그인합니다.
 
-실제 GitHub 계정이 아니라 랩 환경을 위해 생성된 특수 계정으로 로그인됩니다.
+실제 GitHub 계정이 아니라 워크샵 환경을 위해 생성된 특수 계정으로 로그인됩니다.
 
 ## 2. GitHub Copilot CLI에 로그인
 

@@ -5,11 +5,11 @@
 
 ## 🔥 Agentic Knowledge Bases 구축 - Next-Level RAG with Azure AI Search
 
-### 세션 소개
+### 워크샵 소개
 
-이 실습 랩에서는 에이전트형 검색(agentic retrieval)을 사용해 Azure AI Search 지식 베이스를 구축하고, 다양한 소스 유형으로 이를 확장합니다. 5개의 단계별 노트북 실습을 통해 여러 문서를 기반으로 한 멀티 소스 지식 베이스를 구축하고, MCP를 통한 웹 검색으로 확장하며, Fabric IQ와 Work IQ를 추가하고, 마지막으로 Work IQ와 Fabric IQ를 하나의 지식 베이스에 결합합니다. 랩을 마치면 여러 소스 유형을 혼합한 유연한 에이전트형 지식 베이스를 갖추게 됩니다.
+이 실습 워크샵에서는 에이전트형 검색(agentic retrieval)을 사용해 Azure AI Search 지식 베이스를 구축하고, 다양한 소스 유형으로 이를 확장합니다. 5개의 단계별 노트북 실습을 통해 여러 문서를 기반으로 한 멀티 소스 지식 베이스를 구축하고, MCP를 통한 웹 검색으로 확장하며, Fabric IQ와 Work IQ를 추가하고, 마지막으로 Work IQ와 Fabric IQ를 하나의 지식 베이스에 결합합니다. 워크샵을 마치면 여러 소스 유형을 혼합한 유연한 에이전트형 지식 베이스를 갖추게 됩니다.
 
-###  본인 환경에서 시작하기
+###  본인 환경에서 시작하기 (Self-Paced Lab)
 
 [./deploy_yourself.md](./deploy_yourself.md) 가이드의 단계를 따르세요.
 
