@@ -70,7 +70,7 @@ azd up
 
 ```text
 ? Select an Azure Subscription to use:: <사용할 구독 선택>
-? Enter a value for the 'location' infrastructure parameter:: 36. (Europe) Sweden Central (swedencentral)
+? Enter a value for the 'location' infrastructure parameter:: 14. (Asia Pacific) Korea Central (koreacentral)
 ? Pick a resource group to use:: 1. Create a new resource group
 ? Enter a name for the new resource group:: rg-<alias>-<날짜>
 ```
@@ -85,21 +85,21 @@ azd up
 
 > **참고:** 이메일 시딩(Part 4 - Work IQ용)은 `Mail.Send` 애플리케이션 권한이 있는 서비스 주체가 필요하며 직접 배포 시에는 **실행되지 않습니다**. Part 4에서는 대신 본인의 Mail 데이터를 사용합니다.
 
-### azd up 진행 중 해야 할 일: Fabric IQ Ontology 기능 활성화
+### (중요) azd up 진행 중 해야 할 일: Fabric IQ Ontology 기능 활성화
 
 `azd up`이 AI Search/Fabric 용량을 프로비저닝하는 약 20분 동안, **아래 설정을 미리 켜두어야** postprovision 단계에서 Fabric IQ Ontology 생성이 실패하지 않습니다.
 
-1. Azure Portal에서 방금 생성된 **Fabric 용량**(리소스 이름이 `...fabric...`로 끝남) 리소스명을 기억합니다
+1. Azure Portal 에서 방금 생성된 **Fabric 용량** 리소스명을 기억합니다
 2. 새 인터넷 창을 열어 **Microsoft Fabric 관리 포털**  [https://app.fabric.microsoft.com/admin-portal/capacities](https://app.fabric.microsoft.com/admin-portal/capacities) 로 이동한 후 **패브릭 용량** 을 선택 해당 용량 이름을 직접 선택 합니다.
 
-<img src="img/fabric_iq_ontology_enable_0.png" alt="Fabric IQ Ontology 미리 보기 기능 활성화" width="400"/>
+<img src="img/fabric_iq_ontology_enable_0.png" alt="Fabric IQ Ontology 미리 보기 기능 활성화" width="700"/>
 
 3. **위임된 테넌트 설정** 탭에서 **"사용자가 Ontology(미리 보기) 항목을 만들 수 있음"** 항목을 찾습니다
 4. **테넌트 관리자 선택 재정의**를 체크하고 토글을 **사용**으로 켠 뒤, 적용 대상은 **"용량의 모든 사용자"** 를 선택하고 **적용**을 클릭합니다
 
 <img src="img/fabric_iq_ontology_enable.png" alt="Fabric IQ Ontology 미리 보기 기능 활성화" width="400"/>
 
-> **참고:** 이 설정이 반영되지 않은 채로 `azd up`이 끝나면 postprovision 단계에서 Fabric Lakehouse/테이블은 생성되지만 **Ontology 생성만 실패**할 수 있습니다. 아래 "Ontology 생성이 실패했다면" 항목을 참고해 재시도하세요.
+> **참고:** 이 설정이 반영되지 않은 채로 `azd up`이 끝나면 postprovision 단계에서 Fabric Lakehouse/테이블은 생성되지만 **Ontology 생성만 실패**할 수 있습니다. 아래 "(Troubleshooting) Ontology 생성이 실패했다면" 항목을 참고해 재시도하세요.
 
 #### (Troubleshooting) Ontology 생성이 실패했다면
 
