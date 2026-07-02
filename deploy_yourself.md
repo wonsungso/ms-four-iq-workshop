@@ -8,7 +8,7 @@
 - **GitHub 계정** (GitHub Codespaces 사용)
 - **Microsoft Fabric Free Plan 가입** (Fabric Capacity 배포에 필요)
 
-> 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#로컬-환경에서-배포하기-대안) 섹션의 추가 요구 사항을 참고하세요.
+> 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#대안-로컬-환경에서-배포하기) 섹션의 추가 요구 사항을 참고하세요.
 
 ### Microsoft Fabric Free Plan 가입
 
@@ -90,8 +90,6 @@ VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundr
 
 > ✅ Codespaces로 진행했다면 배포가 모두 끝났습니다. 아래 "로컬 환경에서 배포하기" 섹션은 건너뛰고 바로 노트북을 진행하세요.
 
-
-
 ---
 
 ## (대안) 로컬 환경에서 배포하기
@@ -130,7 +128,7 @@ source .venv/bin/activate
 
 ### 3. azd로 배포 및 워크샵 시작
 
-위 [빠른 시작 (GitHub Codespaces, 권장)](#빠른-시작-github-codespaces-권장)의 2~3단계와 동일하게 `azd auth login`, `azd up`을 실행한 뒤 노트북을 시작하세요.
+위 [빠른 시작 (GitHub Codespaces, 권장)](#권장-빠른-시작-github-codespaces)의 2~3단계와 동일하게 `azd auth login`, `azd up`을 실행한 뒤 노트북을 시작하세요.
 
 ## 정리
 
