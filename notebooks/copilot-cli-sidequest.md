@@ -6,11 +6,17 @@
 
 본인의 GitHub 계정으로 로그인합니다.
 
-## 2. GitHub Copilot CLI에 로그인
+## 2. GitHub Copilot CLI 설치 및 로그인
 
 VS Code에서 터미널을 엽니다(Terminal > New Terminal).
 
-GitHub Copilot CLI에 로그인합니다.
+`copilot` 명령이 아직 없다면 먼저 설치합니다.
+
+```bash
+curl -fsSL https://gh.io/copilot-install | bash
+```
+
+설치 후 GitHub Copilot CLI에 로그인합니다.
 
 ```powershell
 copilot login
