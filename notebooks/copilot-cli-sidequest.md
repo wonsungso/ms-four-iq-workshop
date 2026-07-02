@@ -52,7 +52,7 @@ zava-kb
 방금 실행한 노트북에 해당하는 질문을 Copilot에 던집니다. 예를 들면 다음과 같습니다.
 
 ```powershell
-copilot -i "Use the Zava knowledge base to answer: what health benefits are available?"
+copilot -i "Zava 지식 베이스를 사용해 답변해 줘: 어떤 건강 복리후생을 이용할 수 있나요?"
 ```
 
-"Use Zava knowledge base to answer"라는 접두사 없이 질문해 볼 수도 있지만, 그럴 경우 Copilot CLI 에이전트가 지식 베이스 MCP 서버를 호출하지 않을 수 있습니다. 모델 가중치에서 답하거나 다른 도구를 사용해 답할 수 있기 때문입니다.
+"Zava 지식 베이스를 사용해 답변해 줘"라는 접두사 없이 질문해 볼 수도 있지만, 그럴 경우 Copilot CLI 에이전트가 지식 베이스 MCP 서버를 호출하지 않을 수 있습니다. 모델 가중치에서 답하거나 다른 도구를 사용해 답할 수 있기 때문입니다.
