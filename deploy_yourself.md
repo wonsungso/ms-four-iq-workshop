@@ -73,7 +73,7 @@ azd up
 ? Enter a value for the 'location' infrastructure parameter:: 14. (Asia Pacific) Korea Central (koreacentral)
 ? Enter a value for the 'location' infrastructure parameter:: rg-<alias>-<날짜>
 ```
-> ⏱️ **배포까지 약 20 분의 시간이 소요됩니다.** (Azure AI Search 서비스 생성이 특히 오래 걸립니다.) 잠시 기다려 주세요.
+> ⏱️ **배포까지 약 20 분의 시간이 소요됩니다.** 잠시 기다려 주세요.
 
 이 명령은 다음을 수행합니다.
 
@@ -89,6 +89,8 @@ azd up
 VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundry-iq-kb.ipynb](./notebooks/part1-standard-foundry-iq-kb.ipynb) 부터 시작**하세요.
 
 > ✅ Codespaces로 진행했다면 배포가 모두 끝났습니다. 아래 "로컬 환경에서 배포하기" 섹션은 건너뛰고 바로 노트북을 진행하세요.
+
+
 
 ---
 
