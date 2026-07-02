@@ -87,6 +87,8 @@ azd up
 
 VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundry-iq-kb.ipynb](./notebooks/part1-standard-foundry-iq-kb.ipynb) 부터 시작**하세요.
 
+---
+
 ## 로컬 환경에서 배포하기
 
 Codespaces 대신 로컬 VS Code에서 진행하려면 다음이 추가로 필요합니다.
