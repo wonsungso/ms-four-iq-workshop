@@ -76,6 +76,8 @@ azd up
 ```
 > ⏱️ **배포까지 약 20 분의 시간이 소요됩니다.** 잠시 기다려 주세요.
 
+> **배포 실패 리소스** 가 있을 시, 완료 후 `azd up` 을 재시도 해주세요.
+
 이 명령은 다음을 수행합니다.
 
 - 모든 Azure 리소스 프로비저닝 (AI Search, Foundry 프로젝트, OpenAI 모델, Fabric 용량)
@@ -114,9 +116,11 @@ azd hooks run postprovision
 
 ### 3. 워크샵 시작
 
-VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundry-iq-kb.ipynb](./notebooks/part1-standard-foundry-iq-kb.ipynb) 부터 시작**하세요.
+<img src="img/provision_completed.png" alt="Provision 완료" width="400"/>
 
 > ✅ Codespaces로 진행했다면 배포가 모두 끝났습니다. 아래 "로컬 환경에서 배포하기" 섹션은 건너뛰고 바로 노트북을 진행하세요.
+
+VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundry-iq-kb.ipynb](./notebooks/part1-standard-foundry-iq-kb.ipynb) 부터 시작**하세요.
 
 ---
 
