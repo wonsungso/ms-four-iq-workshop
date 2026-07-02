@@ -8,7 +8,7 @@
 - **GitHub 계정** (GitHub Codespaces 사용)
 - **Microsoft Fabric Free Plan 가입** (Fabric Capacity 배포에 필요)
 
-> 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#로컬-환경에서-배포하기) 섹션의 추가 요구 사항을 참고하세요.
+> 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#로컬-환경에서-배포하기-대안) 섹션의 추가 요구 사항을 참고하세요.
 
 ### Microsoft Fabric Free Plan 가입
 
@@ -35,7 +35,7 @@
   - Azure OpenAI 모델 배포
 - Azure RBAC 역할 할당
 
-## 빠른 시작 (GitHub Codespaces)
+## (권장) 빠른 시작 (GitHub Codespaces)
 
 이 리포지토리는 [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json)을 통해 Python, Azure CLI, azd, Jupyter 확장이 미리 설치된 Codespace 환경을 제공합니다. 별도 로컬 설치 없이 바로 시작할 수 있습니다.
 
@@ -73,6 +73,7 @@ azd up
 ? Enter a value for the 'location' infrastructure parameter:: 14. (Asia Pacific) Korea Central (koreacentral)
 ? Enter a value for the 'location' infrastructure parameter:: rg-<alias>-<날짜>
 ```
+> ⏱️ **배포까지 약 20 분의 시간이 소요됩니다.** (Azure AI Search 서비스 생성이 특히 오래 걸립니다.) 잠시 기다려 주세요.
 
 이 명령은 다음을 수행합니다.
 
@@ -87,9 +88,11 @@ azd up
 
 VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundry-iq-kb.ipynb](./notebooks/part1-standard-foundry-iq-kb.ipynb) 부터 시작**하세요.
 
+> ✅ Codespaces로 진행했다면 배포가 모두 끝났습니다. 아래 "로컬 환경에서 배포하기" 섹션은 건너뛰고 바로 노트북을 진행하세요.
+
 ---
 
-## 로컬 환경에서 배포하기
+## (대안) 로컬 환경에서 배포하기
 
 Codespaces 대신 로컬 VS Code에서 진행하려면 다음이 추가로 필요합니다.
 
@@ -125,7 +128,7 @@ source .venv/bin/activate
 
 ### 3. azd로 배포 및 워크샵 시작
 
-위 [빠른 시작 (GitHub Codespaces)](#빠른-시작-github-codespaces)의 2~3단계와 동일하게 `azd auth login`, `azd up`을 실행한 뒤 노트북을 시작하세요.
+위 [빠른 시작 (GitHub Codespaces, 권장)](#빠른-시작-github-codespaces-권장)의 2~3단계와 동일하게 `azd auth login`, `azd up`을 실행한 뒤 노트북을 시작하세요.
 
 ## 정리
 
