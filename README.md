@@ -1,13 +1,21 @@
 # Microsoft IQ Workshop
 
 > [!NOTE]
-> 이 저장소는 [microsoft/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq](https://github.com/wonsungso/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq) 저장소를 기반으로 재작성되었으며, Self-paced Lab 형태로 기술 되었습니다. 원본 콘텐츠의 모든 권리는 원저작자에게 있습니다.
+> 이 워크샵은 [microsoft/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq](https://github.com/wonsungso/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq) 리포지토리를 기반으로 재작성되었으며, Self-paced Lab 형태로 기술 되었습니다. 원본 콘텐츠의 모든 권리는 원저작자에게 있습니다.
 
 ## 🔥 Agentic Knowledge Bases 구축 - Next-Level RAG with Azure AI Search
 
 ### 워크샵 소개
 
-이 실습 워크샵에서는 에이전트형 검색(agentic retrieval)을 사용해 Azure AI Search 지식 베이스를 구축하고, 다양한 소스 유형으로 이를 확장합니다. 5개의 단계별 노트북 실습을 통해 여러 문서를 기반으로 한 멀티 소스 지식 베이스를 구축하고, MCP를 통한 웹 검색으로 확장하며, Fabric IQ와 Work IQ를 추가하고, 마지막으로 Work IQ와 Fabric IQ를 하나의 지식 베이스에 결합합니다. 워크샵을 마치면 여러 소스 유형을 혼합한 유연한 에이전트형 지식 베이스를 갖추게 됩니다.
+<img src="img/main_workflow.png" alt="워크샵 전체 워크플로우" width="800"/>
+
+Zava(DIY 소매업체) 신입 직원이 되어, Azure AI Search 에이전트형 검색의 **지식 베이스(Knowledge Base)** 에 소스를 하나씩 추가하며 HR·복리후생 질의응답 시스템을 확장하는 5단계 실습입니다.
+
+- **Part 1**: File/Indexed Knowledge Source로 기본 지식 베이스 구축
+- **Part 2**: Web IQ(MCP)로 실시간 웹 검색 추가
+- **Part 3**: Fabric IQ로 구조화된 제품 데이터 추가
+- **Part 4**: Work IQ로 M365 개인 업무 데이터 추가
+- **Part 5**: 4개 소스를 하나의 지식 베이스로 통합
 
 ###  본인 환경에서 시작하기 (Self-Paced Lab)
 
