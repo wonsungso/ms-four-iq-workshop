@@ -53,7 +53,7 @@
 
 ```bash
 azd auth login --use-device-code
-azd env set FABRIC_ADMIN_UPN <실제-로그인한-본인-이메일>
+azd env set FABRIC_ADMIN_UPN <실제-로그인한-구독-이메일-주소>
 ```
 
 다음 환결 설정 값을 입력합니다.
@@ -69,7 +69,6 @@ azd up
 `azd up`을 처음 실행하면 각종 도구 설치 후 아래와 같이 환경 설정/배포 관련 옵션을 입력해주세요 
 
 ```text
-? Enter a unique environment name: [Type ? for hint]  : <alias>-<날짜>
 ? Enter a value for the 'location' infrastructure parameter:: 14. (Asia Pacific) Korea Central (koreacentral)
 ? Enter a value for the 'location' infrastructure parameter:: rg-<alias>-<날짜>
 ```

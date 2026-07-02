@@ -704,12 +704,11 @@ def create_or_get_ontology(workspace_id: str, name: str) -> dict:
     log_message(f"Creating ontology '{name}'...")
     resp = fabric_post(url, payload)
     if resp.status_code not in (200, 201, 202):
-        log_message(f"ERROR: Failed to create ontology: {resp.status_code} - {resp.text}")
-        sys.exit(1)
+        raise RuntimeError(f"Failed to create ontology: {resp.status_code} - {resp.text}")
 
     operation_url = resp.headers.get("Location", "")
     if operation_url and not poll_fabric_operation(operation_url):
-        sys.exit(1)
+        raise RuntimeError(f"Ontology '{name}' creation operation failed to complete.")
 
     # Fabric ontology create can complete asynchronously with an empty response body.
     for _ in range(12):
@@ -719,8 +718,7 @@ def create_or_get_ontology(workspace_id: str, name: str) -> dict:
             return existing
         time.sleep(5)
 
-    log_message(f"ERROR: Ontology '{name}' was not found after create completed.")
-    sys.exit(1)
+    raise RuntimeError(f"Ontology '{name}' was not found after create completed.")
 
 
 def update_ontology_definition(
@@ -859,24 +857,43 @@ def main():
         ontology_success = True
         if CREATE_ONTOLOGY and table_success:
             log_message(f"\n[6/{total_steps}] Creating Fabric IQ Ontology")
-            ontology = create_or_get_ontology(workspace_id, FABRIC_ONTOLOGY_NAME)
-            ontology_success = update_ontology_definition(
-                workspace_id, ontology["id"], lakehouse_id
-            )
-            status = "SUCCESS" if ontology_success else "FAILED"
-            log_message(f"  {status}: {FABRIC_ONTOLOGY_NAME} ({ontology['id']})")
+            try:
+                ontology = create_or_get_ontology(workspace_id, FABRIC_ONTOLOGY_NAME)
+                ontology_success = update_ontology_definition(
+                    workspace_id, ontology["id"], lakehouse_id
+                )
+                status = "SUCCESS" if ontology_success else "FAILED"
+                log_message(f"  {status}: {FABRIC_ONTOLOGY_NAME} ({ontology['id']})")
+            except Exception as e:
+                ontology = None
+                ontology_success = False
+                log_message(f"  FAILED: Ontology setup failed ({type(e).__name__}: {e})")
+                log_message(
+                    "  This is often caused by the Fabric IQ Ontology feature not being "
+                    "available yet in this tenant/region. Lakehouse and tables were still "
+                    "created successfully. Part 3/5 (Fabric IQ) of the workshop may not "
+                    "work until this feature becomes available."
+                )
         elif CREATE_ONTOLOGY:
             ontology_success = False
             log_message("  FAILED: Skipped ontology setup because table loading failed.")
 
         log_message("=" * 60)
 
+        if ontology:
+            log_message(f"Ontology: {FABRIC_ONTOLOGY_NAME} ({ontology['id']})")
+            update_root_env({"FABRIC_ONTOLOGY_ID": ontology["id"]})
+            log_message("Updated repo root .env with FABRIC_ONTOLOGY_ID")
+
         if table_success and ontology_success:
             log_message("\nAll tables and ontology setup completed successfully!")
-            if ontology:
-                log_message(f"Ontology: {FABRIC_ONTOLOGY_NAME} ({ontology['id']})")
-                update_root_env({"FABRIC_ONTOLOGY_ID": ontology["id"]})
-                log_message("Updated repo root .env with FABRIC_ONTOLOGY_ID")
+            return True
+        elif table_success:
+            log_message(
+                "\nWARNING: Lakehouse and tables were created successfully, but ontology "
+                "setup failed or was unavailable. Continuing (this is not treated as a "
+                "fatal error)."
+            )
             return True
         else:
             log_message("\nWARNING: Some tables or ontology setup failed.")
