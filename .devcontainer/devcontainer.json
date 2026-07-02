@@ -9,7 +9,7 @@
 	},
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "pip3 install -r notebooks/requirements.txt",
+	"postCreateCommand": "pip3 install -r notebooks/requirements.txt && azd config set tool.firstRunCompleted true",
 
 	// Configure tool-specific properties.
     "customizations": {

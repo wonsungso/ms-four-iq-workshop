@@ -16,9 +16,11 @@
 
 1. [https://app.fabric.microsoft.com/](https://app.fabric.microsoft.com/) 에 접속해 로그인합니다
 2. 안내에 따라 이메일을 입력하고 Microsoft Fabric free 계정 가입을 완료합니다
+
 <img src="img/signup_fabric.png" alt="Microsoft Fabric Free Plan 가입 화면" width="400"/>
 
 3. 아래와 같이 "세부 정보 확인" 단계가 뜨면 가입이 완료된 것입니다. **시작** 버튼을 클릭하세요
+
 <img src="img/signup_fabric_2.png" alt="Microsoft Fabric Free Plan 가입 완료 화면" width="400"/>
 
 ### 필요한 Azure 권한
@@ -51,6 +53,16 @@
 
 ```bash
 azd auth login --use-device-code
+azd env set FABRIC_ADMIN_UPN <실제-로그인한-본인-이메일>
+```
+
+다음 환결 설정 값을 입력합니다.
+
+```text
+? Enter a unique environment name: [Type ? for hint]  : <alias>-<날짜>
+```
+
+```bash
 azd up
 ```
 
@@ -58,7 +70,7 @@ azd up
 
 ```text
 ? Enter a unique environment name: [Type ? for hint]  : <alias>-<날짜>
-? Enter a value for the 'location' infrastructure parameter:: 52. (US) East US 2 (eastus2)
+? Enter a value for the 'location' infrastructure parameter:: 14. (Asia Pacific) Korea Central (koreacentral)
 ? Enter a value for the 'location' infrastructure parameter:: rg-<alias>-<날짜>
 ```
 
