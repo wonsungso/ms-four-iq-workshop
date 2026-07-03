@@ -78,6 +78,42 @@ def update_root_env(values: dict):
         set_key(env_path, key, val)
 
 
+def reorder_web_iq_key_last():
+    """Move the WEB_IQ_KEY block back to the end of the repo root .env file.
+
+    setup-env.py writes WEB_IQ_KEY as the last line, but dotenv.set_key() (used
+    by update_root_env above) appends brand-new keys such as
+    FABRIC_WORKSPACE_ID/FABRIC_ONTOLOGY_ID at the end of the file, which pushes
+    the WEB_IQ_KEY block into the middle. Call this after all other env
+    updates are done to restore WEB_IQ_KEY as the last block.
+    """
+    env_path = os.path.join(REPO_ROOT, ".env")
+    if not os.path.exists(env_path):
+        return
+    with open(env_path, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+
+    web_iq_lines = []
+    other_lines = []
+    for line in lines:
+        if line.startswith("WEB_IQ_KEY="):
+            if other_lines and other_lines[-1].strip().startswith("# Web IQ"):
+                web_iq_lines.append(other_lines.pop())
+            web_iq_lines.append(line)
+        else:
+            other_lines.append(line)
+
+    if not web_iq_lines:
+        return
+
+    while other_lines and other_lines[-1].strip() == "":
+        other_lines.pop()
+
+    new_content = "\n".join(other_lines) + "\n\n" + "\n".join(web_iq_lines) + "\n"
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.write(new_content)
+
+
 def log_message(message: str):
     """Write message to log file and stdout with timestamp."""
     os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
@@ -903,6 +939,8 @@ def main():
         log_message(f"ERROR: {type(e).__name__}: {str(e)}")
         log_message(f"Traceback:\n{traceback.format_exc()}")
         return False
+    finally:
+        reorder_web_iq_key_last()
 
 
 if __name__ == "__main__":
