@@ -78,14 +78,20 @@ def update_root_env(values: dict):
         set_key(env_path, key, val)
 
 
-def reorder_web_iq_key_last():
-    """Move the WEB_IQ_KEY block back to the end of the repo root .env file.
+def reorder_env_sections():
+    """Normalize the repo root .env layout after dotenv.set_key() appends new keys.
 
-    setup-env.py writes WEB_IQ_KEY as the last line, but dotenv.set_key() (used
-    by update_root_env above) appends brand-new keys such as
-    FABRIC_WORKSPACE_ID/FABRIC_ONTOLOGY_ID at the end of the file, which pushes
-    the WEB_IQ_KEY block into the middle. Call this after all other env
-    updates are done to restore WEB_IQ_KEY as the last block.
+    dotenv.set_key() (used by update_root_env above) appends brand-new keys at
+    the very end of the file when they don't already exist. That has two side
+    effects here:
+    - FABRIC_WORKSPACE_ID / FABRIC_ONTOLOGY_ID end up detached from the
+      "Fabric configuration" section (next to FABRIC_CAPACITY_ID).
+    - The WEB_IQ_KEY block (written last by setup-env.py) gets pushed into
+      the middle of the file.
+
+    This re-groups FABRIC_WORKSPACE_ID/FABRIC_ONTOLOGY_ID with
+    FABRIC_CAPACITY_ID, moves WEB_IQ_KEY back to the end, and collapses any
+    stray blank lines left behind by the moves.
     """
     env_path = os.path.join(REPO_ROOT, ".env")
     if not os.path.exists(env_path):
@@ -93,23 +99,42 @@ def reorder_web_iq_key_last():
     with open(env_path, encoding="utf-8") as f:
         lines = f.read().splitlines()
 
-    web_iq_lines = []
+    fabric_extra = []
+    web_iq_block = []
     other_lines = []
+
     for line in lines:
-        if line.startswith("WEB_IQ_KEY="):
+        if line.startswith("FABRIC_WORKSPACE_ID=") or line.startswith("FABRIC_ONTOLOGY_ID="):
+            fabric_extra.append(line)
+        elif line.startswith("WEB_IQ_KEY="):
             if other_lines and other_lines[-1].strip().startswith("# Web IQ"):
-                web_iq_lines.append(other_lines.pop())
-            web_iq_lines.append(line)
+                web_iq_block.append(other_lines.pop())
+            web_iq_block.append(line)
         else:
             other_lines.append(line)
 
-    if not web_iq_lines:
-        return
+    if fabric_extra:
+        for idx, line in enumerate(other_lines):
+            if line.startswith("FABRIC_CAPACITY_ID="):
+                other_lines[idx + 1 : idx + 1] = fabric_extra
+                break
+        else:
+            other_lines.extend(fabric_extra)
 
-    while other_lines and other_lines[-1].strip() == "":
-        other_lines.pop()
+    # Collapse any run of blank lines left behind by the moves above
+    collapsed = []
+    for line in other_lines:
+        if line.strip() == "" and collapsed and collapsed[-1].strip() == "":
+            continue
+        collapsed.append(line)
+    while collapsed and collapsed[-1].strip() == "":
+        collapsed.pop()
 
-    new_content = "\n".join(other_lines) + "\n\n" + "\n".join(web_iq_lines) + "\n"
+    if web_iq_block:
+        new_content = "\n".join(collapsed) + "\n\n" + "\n".join(web_iq_block) + "\n"
+    else:
+        new_content = "\n".join(collapsed) + "\n"
+
     with open(env_path, "w", encoding="utf-8") as f:
         f.write(new_content)
 
@@ -940,7 +965,7 @@ def main():
         log_message(f"Traceback:\n{traceback.format_exc()}")
         return False
     finally:
-        reorder_web_iq_key_last()
+        reorder_env_sections()
 
 
 if __name__ == "__main__":
