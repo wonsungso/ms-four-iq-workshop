@@ -38,8 +38,20 @@ openai_key = post(
     f"/listKeys?api-version=2023-05-01"
 )["key1"]
 
-# Write .env with all values
+# Preserve a real WEB_IQ_KEY across re-runs (this script rewrites .env from
+# scratch every time postprovision runs, so a manually-added key would
+# otherwise be wiped out on the next `azd up` / postprovision retry).
 env_path = Path(__file__).parents[1] / ".env"
+web_iq_key = "your-web-iq-key"
+if env_path.exists():
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("WEB_IQ_KEY="):
+            existing_value = line.split("=", 1)[1].strip()
+            if existing_value and existing_value != "your-web-iq-key":
+                web_iq_key = existing_value
+            break
+
+# Write .env with all values
 env_path.write_text(
     f"""\
 # Azure AI Search Configuration
@@ -58,6 +70,9 @@ AZURE_TENANT_ID={os.environ['AZURE_TENANT_ID']}
 
 # Fabric configuration (populated by lakehouse setup if capacity was deployed)
 FABRIC_CAPACITY_ID={os.environ.get('FABRIC_CAPACITY_ID', '')}
+
+# Web IQ (live web search) - replace with your own key to use Part 2's Web IQ knowledge source
+WEB_IQ_KEY={web_iq_key}
 """,
     encoding="utf-8",
 )
