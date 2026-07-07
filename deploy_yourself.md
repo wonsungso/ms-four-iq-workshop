@@ -7,6 +7,7 @@
 - 리소스를 생성할 수 있는 충분한 권한이 있는 **Azure 구독**
 - **GitHub 계정** (GitHub Codespaces 사용)
 - **Microsoft Fabric Free Plan 가입** (Fabric Capacity 배포에 필요)
+- **Work IQ 액세스 요청** (Part 4/5 실습에 필요, Microsoft 승인 필요 - 승인까지 시간이 걸리므로 미리 신청 권장)
 
 > 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#대안-로컬-환경에서-배포하기) 섹션의 추가 요구 사항을 참고하세요.
 
@@ -23,7 +24,41 @@
 
 <img src="img/signup_fabric_2.png" alt="Microsoft Fabric Free Plan 가입 완료 화면" width="400"/>
 
+### Work IQ 액세스 요청 (Part 4/5 Work IQ 실습에 필요)
+
+Work IQ 검색은 기본적으로 꺼져 있으며, **Microsoft의 승인을 받은 요청이 있어야만** 사용할 수 있습니다. 아래 절차를 미리 완료하지 않으면 Part 4/5 노트북에서 Work IQ 지식 소스를 만들 때 다음과 같은 오류가 발생합니다.
+
+> `HttpResponseError: Work IQ knowledge sources are not enabled for this subscription. Please visit https://aka.ms/enable-work-iq-ks to learn more.`
+
+**Work IQ 액세스 요청 절차** (참고: [Create a Work IQ Knowledge Source](https://learn.microsoft.com/azure/search/agentic-knowledge-source-how-to-work-iq#request-access-to-work-iq-retrieval)):
+
+1. 구독에 `EnableFoundryIQWithWorkIQ` 기능 플래그를 등록합니다(구독의 **Owner** 또는 **Contributor** 역할 필요).
+
+    ```bash
+    az feature register --namespace Microsoft.Search --name EnableFoundryIQWithWorkIQ --subscription "<내-구독-GUID>"
+    ```
+
+2. `Microsoft.Search` 리소스 공급자를 다시 등록합니다.
+
+    ```bash
+    az provider register -n Microsoft.Search --subscription "<내-구독-GUID>"
+    ```
+
+3. 테넌트의 **Microsoft Entra 관리자**가 [Work IQ 액세스 요청 양식](https://aka.ms/foundry-iq-work-iq-admin-consent-form)을 제출합니다.
+
+4. Microsoft가 요청을 검토하고 승인할 때까지 기다립니다. **이 승인은 즉시 처리되지 않습니다.**
+
+**추가 전제 조건**
+- Azure AI Search 서비스, Work IQ 환경, 최종 사용자가 모두 **동일한 Microsoft Entra 테넌트**에 있어야 합니다.
+
+기능 플래그 상태가 `Registered`인지 아래 명령으로 확인할 수 있습니다.
+
+```bash
+az feature show --namespace Microsoft.Search --name EnableFoundryIQWithWorkIQ --subscription "<내-구독-GUID>" --query "properties.state"
+```
+
 ### 필요한 Azure 권한
+
 
 다음 작업을 수행할 권한이 필요합니다.
 
