@@ -7,6 +7,7 @@
 - 리소스를 생성할 수 있는 충분한 권한이 있는 **Azure 구독**
 - **GitHub 계정** (GitHub Codespaces 사용)
 - **Microsoft Fabric Free Plan 가입** (Fabric Capacity 배포에 필요)
+- 각 최종 사용자를 위한 **Microsoft 365 Copilot 라이선스** (Work IQ 질의에 필요)
 - **Work IQ 액세스 요청** (Part 4/5 실습에 필요, Microsoft 승인 필요 - 승인까지 시간이 걸리므로 미리 신청 권장)
 
 > 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#대안-로컬-환경에서-배포하기) 섹션의 추가 요구 사항을 참고하세요.
