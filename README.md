@@ -17,7 +17,16 @@ Zava(DIY 소매업체) 신입 직원이 되어, Azure AI Search 에이전트형 
 - **Part 4**: Work IQ로 M365 개인 업무 데이터 추가
 - **Part 5**: 4개 소스를 하나의 지식 베이스로 통합
 
-###  본인 환경에서 시작하기 (Self-Paced Lab)
+<img src="img/microsoft_iq.png" alt="Part 5: 4개 지식 소스 통합 워크플로우" width="700"/>
+
+이 워크샵에서 다루는 4가지 지식 소스(IQ)는 다음과 같습니다.
+
+- **Work IQ**: 로그인한 사용자의 Microsoft 365 데이터(이메일, Teams, 캘린더)를 위임 신원으로 질의하는 지식 소스
+- **Fabric IQ**: Microsoft Fabric 온톨로지에 연결해 구조화된 운영 데이터(제품, 재고 등)를 질의하는 지식 소스
+- **Foundry IQ**: 업로드된 파일이나 미리 구축된 검색 인덱스를 질의하는 기본 지식 소스(문서/정책 등 비정형 콘텐츠)
+- **Web IQ**: MCP 서버를 통해 실시간 웹 검색 결과와 인용을 가져오는 지식 소스
+
+### 본인 환경에서 시작하기 (Self-Paced Lab)
 
 [./deploy_yourself.md](./deploy_yourself.md) 가이드의 단계를 따르세요.
 
