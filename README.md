@@ -1,7 +1,7 @@
 # Microsoft IQ Workshop
 
 > [!NOTE]
-> 이 워크샵은 [microsoft/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq](https://github.com/wonsungso/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq) 리포지토리를 기반으로 재작성되었으며, Self-paced Lab 형태로 기술 되었습니다. 원본 콘텐츠의 모든 권리는 원저작자에게 있습니다.
+> 이 워크샵은 [microsoft/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq](https://github.com/microsoft/Build26-LAB532-from-data-to-context-agent-ready-knowledge-with-foundry-iq) 리포지토리를 기반으로 재작성되었으며, Self-paced Lab 형태로 기술 되었습니다. 원본 콘텐츠의 모든 권리는 원저작자에게 있습니다.
 
 ## 🔥 Agentic Knowledge Bases 구축 - Next-Level RAG with Azure AI Search
 
