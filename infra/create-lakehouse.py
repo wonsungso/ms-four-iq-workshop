@@ -634,6 +634,58 @@ def make_entity_parts(
     ]
 
 
+def make_relationship_parts(
+    relationship_id: int,
+    relationship_name: str,
+    source_entity_id: int,
+    target_entity_id: int,
+    workspace_id: str,
+    lakehouse_id: str,
+    data_table_name: str,
+    source_key_column: str,
+    source_key_property_id: str,
+    target_key_column: str,
+    target_key_property_id: str,
+) -> list[dict]:
+    """Build ontology relationship type and contextualization (edge) definition parts.
+
+    The contextualization binds the relationship to an existing lakehouse table that
+    already contains both the source entity's key column and a column matching the
+    target entity's key, so no separate join table is needed here.
+    """
+    definition = {
+        "namespace": "usertypes",
+        "id": str(relationship_id),
+        "name": relationship_name,
+        "namespaceType": "Custom",
+        "source": {"entityTypeId": str(source_entity_id)},
+        "target": {"entityTypeId": str(target_entity_id)},
+    }
+    contextualization_id = str(uuid.uuid4())
+    contextualization = {
+        "id": contextualization_id,
+        "dataBindingTable": {
+            "sourceType": "LakehouseTable",
+            "workspaceId": workspace_id,
+            "itemId": lakehouse_id,
+            "sourceTableName": data_table_name,
+        },
+        "sourceKeyRefBindings": [
+            {"sourceColumnName": source_key_column, "targetPropertyId": source_key_property_id}
+        ],
+        "targetKeyRefBindings": [
+            {"sourceColumnName": target_key_column, "targetPropertyId": target_key_property_id}
+        ],
+    }
+    return [
+        create_definition_part(f"RelationshipTypes/{relationship_id}/definition.json", definition),
+        create_definition_part(
+            f"RelationshipTypes/{relationship_id}/Contextualizations/{contextualization_id}.json",
+            contextualization,
+        ),
+    ]
+
+
 def build_zava_ontology_definition(workspace_id: str, lakehouse_id: str) -> dict:
     """Build a Fabric IQ ontology definition for the Zava DIY lakehouse tables."""
     parts = [
@@ -731,6 +783,28 @@ def build_zava_ontology_definition(workspace_id: str, lakehouse_id: str) -> dict
 
     for spec in entity_specs:
         parts.extend(make_entity_parts(*spec, workspace_id, lakehouse_id))
+
+    # Relationship (edge): each Product belongs to a Category. The "products" table
+    # already has a "category" column matching Category's key ("categoryName"), so it
+    # doubles as the relationship's data-binding table -- no separate join table needed.
+    # Property IDs follow make_entity_parts's `str((entity_id * 100) + offset)` scheme:
+    # Product.sku is entity 1001's 1st column -> "100101"; Category.categoryName is
+    # entity 1002's 1st column -> "100201".
+    parts.extend(
+        make_relationship_parts(
+            relationship_id=2001,
+            relationship_name="belongsToCategory",
+            source_entity_id=1001,  # Product
+            target_entity_id=1002,  # Category
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            data_table_name="products",
+            source_key_column="sku",
+            source_key_property_id="100101",  # Product.sku
+            target_key_column="category",
+            target_key_property_id="100201",  # Category.categoryName
+        )
+    )
 
     return {"definition": {"parts": parts}}
 
