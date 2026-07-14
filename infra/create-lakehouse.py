@@ -18,6 +18,12 @@ Environment variables (from .env):
   FABRIC_ONTOLOGY_NAME - Name for the ontology (default: ZavaDIYOntology)
   CREATE_ONTOLOGY      - Create/update ontology after table load (default: true)
   INCLUDE_EMBEDDINGS   - Include vector embeddings in products table (default: false)
+  INCLUDE_CATEGORY_RELATIONSHIP - Add a belongsToCategory relationship (Product->Category)
+                         to the ontology (default: false). Disabled by default because it
+                         currently causes the Fabric IQ GraphModel refresh to fail with
+                         "GraphNotRefreshable: Graph doesn't have valid content and cannot
+                         be refreshed." in this Fabric Ontology preview feature. Only
+                         enable this for further investigation of that issue.
 """
 
 import base64
@@ -63,6 +69,11 @@ FABRIC_LAB_USER_UPN = os.getenv("FABRIC_LAB_USER_UPN", "")
 FABRIC_LAB_USER_OID = os.getenv("FABRIC_LAB_USER_OID", "")
 CREATE_ONTOLOGY = os.getenv("CREATE_ONTOLOGY", "true").lower() == "true"
 INCLUDE_EMBEDDINGS = os.getenv("INCLUDE_EMBEDDINGS", "false").lower() == "true"
+# Disabled by default: adding this relationship currently breaks the Fabric IQ
+# GraphModel refresh ("GraphNotRefreshable: Graph doesn't have valid content and
+# cannot be refreshed."). Set INCLUDE_CATEGORY_RELATIONSHIP=true to re-enable once
+# the underlying Fabric Ontology preview issue is resolved.
+INCLUDE_CATEGORY_RELATIONSHIP = os.getenv("INCLUDE_CATEGORY_RELATIONSHIP", "false").lower() == "true"
 _CREDENTIAL = None
 
 # Logging
@@ -790,21 +801,22 @@ def build_zava_ontology_definition(workspace_id: str, lakehouse_id: str) -> dict
     # Property IDs follow make_entity_parts's `str((entity_id * 100) + offset)` scheme:
     # Product.sku is entity 1001's 1st column -> "100101"; Category.categoryName is
     # entity 1002's 1st column -> "100201".
-    parts.extend(
-        make_relationship_parts(
-            relationship_id=2001,
-            relationship_name="belongsToCategory",
-            source_entity_id=1001,  # Product
-            target_entity_id=1002,  # Category
-            workspace_id=workspace_id,
-            lakehouse_id=lakehouse_id,
-            data_table_name="products",
-            source_key_column="sku",
-            source_key_property_id="100101",  # Product.sku
-            target_key_column="category",
-            target_key_property_id="100201",  # Category.categoryName
+    if INCLUDE_CATEGORY_RELATIONSHIP:
+        parts.extend(
+            make_relationship_parts(
+                relationship_id=2001,
+                relationship_name="belongsToCategory",
+                source_entity_id=1001,  # Product
+                target_entity_id=1002,  # Category
+                workspace_id=workspace_id,
+                lakehouse_id=lakehouse_id,
+                data_table_name="products",
+                source_key_column="sku",
+                source_key_property_id="100101",  # Product.sku
+                target_key_column="category",
+                target_key_property_id="100201",  # Category.categoryName
+            )
         )
-    )
 
     return {"definition": {"parts": parts}}
 
