@@ -1,4 +1,4 @@
-# 내 Azure 구독에 직접 배포하기
+# Azure 구독에 직접 배포하기
 
 이 폴더에는 지식 베이스 인프라를 본인의 Azure 구독에 배포하기 위한 리소스가 들어 있습니다.
 
@@ -8,11 +8,12 @@
 - **GitHub 계정** (GitHub Codespaces 사용)
 - **Microsoft Fabric Free Plan 가입** (Fabric Capacity 배포에 필요)
 - 각 최종 사용자를 위한 **Microsoft 365 Copilot 라이선스** (Work IQ 질의에 필요)
+- **Work IQ API 지출(Spending) 활성화** (Part 4/5 실습에 필요, Microsoft 365 관리 센터에서 설정)
 - **Work IQ 액세스 요청** (Part 4/5 실습에 필요, Microsoft 승인 필요 - 승인까지 시간이 걸리므로 미리 신청 권장)
 
 > 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#대안-로컬-환경에서-배포하기) 섹션의 추가 요구 사항을 참고하세요.
 
-### Microsoft Fabric Free Plan 가입
+### 1. Microsoft Fabric Free Plan 가입
 
 테넌트/계정이 Microsoft Fabric에 가입되어 있지 않으면 Fabric Capacity 리소스 배포 시 `Unauthorized` 오류가 발생합니다. `azd up`을 실행하기 **전에** 아래 절차로 먼저 가입하세요.
 
@@ -25,7 +26,25 @@
 
 <img src="img/signup_fabric_2.png" alt="Microsoft Fabric Free Plan 가입 완료 화면" width="400"/>
 
-### Work IQ 액세스 요청 (Part 4/5 Work IQ 실습에 필요)
+### 2. Work IQ API 지출(Spending) 활성화 (Part 4/5 Work IQ 실습에 필요)
+
+Work IQ API는 Microsoft 365 Copilot의 사용량 기반 결제(usage-based billing/AI 크레딧) 대상 서비스입니다. 
+이 설정이 활성화되어 있지 않으면 Part 4/5 노트북에서 Work IQ를 질의할 때 다음과 같은 오류가 발생할 수 있습니다.
+
+> `WorkIQ A2A call failed with status code Forbidden.`
+
+**활성화 절차** (Global administrator 또는 Billing administrator 권한 필요):
+
+1. [Microsoft 365 관리 센터의 Copilot 비용 관리(Cost Management) 페이지](https://admin.cloud.microsoft/#/copilot/costmanagement/configuration)로 이동합니다.
+2. **Copilot** → **Cost Management**에서 **Get Started**를 선택합니다.
+3. "조직을 위한 기본 지출 정책 활성화" 패널에서 결제 방법(Azure 구독, 없으면 자동 생성 가능), 월별 지출 한도, 알림 등을 설정한 뒤 **Activate**를 클릭합니다.
+4. 활성화 후 **Agents and services**에 **Work IQ API**가 포함되어 있는지 확인합니다.
+
+<img src="img/m365_admin_copilot_workiq_enable.png" alt="Microsoft 365 관리 센터에서 Work IQ API 지출 활성화" width="700"/>
+
+> **참고:** 활성화 후 실제로 반영되기까지 **전파 지연(propagation delay)** 이 있을 수 있습니다. 
+
+### 3. Work IQ 액세스 요청 (Part 4/5 Work IQ 실습에 필요)
 
 Work IQ 검색은 기본적으로 꺼져 있으며, **Microsoft의 승인을 받은 요청이 있어야만** 사용할 수 있습니다. 아래 절차를 미리 완료하지 않으면 Part 4/5 노트북에서 Work IQ 지식 소스를 만들 때 다음과 같은 오류가 발생합니다.
 
@@ -160,7 +179,8 @@ VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundr
 
 ---
 
-## (대안) 로컬 환경에서 배포하기
+<details>
+<summary><h2 style="display: inline;">(대안) 로컬 환경에서 배포하기</h2></summary>
 
 Codespaces 대신 로컬 VS Code에서 진행하려면 다음이 추가로 필요합니다.
 
@@ -197,6 +217,8 @@ source .venv/bin/activate
 ### 3. azd로 배포 및 워크샵 시작
 
 위 [빠른 시작 (GitHub Codespaces, 권장)](#권장-빠른-시작-github-codespaces)의 2~3단계와 동일하게 `azd auth login`, `azd up`을 실행한 뒤 노트북을 시작하세요.
+
+</details>
 
 ## 정리
 
