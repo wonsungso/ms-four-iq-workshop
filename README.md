@@ -26,6 +26,20 @@ Zava(DIY 소매업체) 신입 직원이 되어, Azure AI Search 에이전트형 
 - **Foundry IQ**: 업로드된 파일이나 미리 구축된 검색 인덱스를 질의하는 기본 지식 소스(문서/정책 등 비정형 콘텐츠)
 - **Web IQ**: MCP 서버를 통해 실시간 웹 검색 결과와 인용을 가져오는 지식 소스
 
+이 워크샵의 모든 Part는 각자 새로운 지식 소스를 다루는 것처럼 보이지만, 실제로는 **하나의 Azure AI Search 지식 베이스(Foundry IQ)** 위에 지식 소스를 하나씩 추가해 나가는 과정입니다. Azure AI Search의 에이전트형 검색이 그 지식 베이스를 통해 여러 Microsoft IQ(Work IQ, Fabric IQ, Web IQ)를 오케스트레이션하고, 인용 기반의 통합된 답변으로 합성합니다.
+
+```mermaid
+flowchart LR
+    U["사용자 질문"] --> KB["Azure AI Search<br/>Knowledge Base<br/>(Foundry IQ, 에이전트형 검색)"]
+
+    KB <--> FIQ["Foundry IQ<br/>색인된 문서/파일<br/>(Part 1)"]
+    KB <--> WEBIQ["Web IQ<br/>MCP 실시간 웹 검색<br/>(Part 2)"]
+    KB <--> FABIQ["Fabric IQ<br/>구조화된 운영 데이터<br/>(Part 3)"]
+    KB <--> WORKIQ["Work IQ<br/>M365 이메일 · Teams · 캘린더<br/>(Part 4)"]
+
+    KB --> ANSWER["인용 기반 통합 답변<br/>(Part 5: 4개 소스 결합)"]
+```
+
 ### 본인 환경에서 시작하기 (Self-Paced Lab)
 
 [./deploy_yourself.md](./deploy_yourself.md) 가이드의 단계를 따르세요.
