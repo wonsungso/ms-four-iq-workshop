@@ -9,7 +9,7 @@
 
 <img src="img/main_workflow.png" alt="워크샵 전체 워크플로우" width="800"/>
 
-Zava(DIY 소매업체) 신입 직원이 되어, Azure AI Search 에이전트형 검색의 **지식 베이스(Knowledge Base)** 에 소스를 하나씩 추가하며 HR·복리후생 질의응답 시스템을 확장하는 6단계 실습입니다.
+Zava(DIY 용품 소매업체) 신입 직원이 되어, Azure AI Search 에이전트형 검색의 **지식 베이스(Knowledge Base)** 에 소스를 하나씩 추가하며 HR·복리후생 질의응답 시스템을 확장하는 6단계 실습입니다.
 
 - **Part 1**: File/Indexed Knowledge Source로 기본 지식 베이스 구축
 - **Part 2**: Web IQ(MCP)로 실시간 웹 검색 추가
