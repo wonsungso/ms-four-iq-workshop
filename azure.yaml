@@ -6,7 +6,7 @@ hooks:
   postprovision:
     posix:
       shell: sh
-      run: infra/hooks/postprovision.sh
+      run: sh infra/hooks/postprovision.sh
       interactive: true
     windows:
       shell: pwsh

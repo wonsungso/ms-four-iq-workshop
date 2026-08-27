@@ -213,6 +213,9 @@ resource microsoftFoundryProject 'Microsoft.CognitiveServices/accounts/projects@
     type: 'SystemAssigned'
   }
   properties: {}
+  dependsOn: [
+    llmModelDeployment
+  ]
 }
 
 // Search Index Data Reader role for the Foundry project managed identity.
