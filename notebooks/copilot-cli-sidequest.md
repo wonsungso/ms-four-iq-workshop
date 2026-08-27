@@ -27,10 +27,10 @@ copilot login
 
 ## 3. 지식 베이스 MCP 서버 추가
 
-노트북 체크포인트 셀이 출력한 명령을 실행합니다. 다음과 같은 형태입니다.
+노트북 체크포인트 셀이 출력한 명령을 실행합니다. 다음과 같은 형태입니다(이 워크샵은 Entra ID 인증만 사용하므로 헤더는 `api-key`가 아니라 `Authorization=Bearer <토큰>`입니다).
 
 ```powershell
-copilot mcp add zava-kb "<KB MCP URL>" --header "api-key=<SERVICE KEY>"
+copilot mcp add zava-kb "<KB MCP URL>" --header "Authorization=Bearer <ACCESS TOKEN>"
 ```
 
 성공하면 다음과 같은 출력이 표시됩니다.
@@ -42,7 +42,7 @@ zava-kb
   Type: http
   URL: https://fiq-search-2ijs67lu3y3ty.search.windows.net/knowledgebases/multisource-search-knowledge-base/mcp?api-version=2026-05-01-preview
   Headers:
-    api-key: ***
+    Authorization: ***
   Tools: * (all)
   Source: User
 ```

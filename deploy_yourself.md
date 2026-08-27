@@ -136,7 +136,7 @@ azd up
 이 명령은 다음을 수행합니다.
 
 - 모든 Azure 리소스 프로비저닝 (AI Search, Foundry 프로젝트, OpenAI 모델, Fabric 용량)
-- API 키를 가져와 필요한 모든 변수가 담긴 `.env` 파일 작성
+- Entra ID 인증에 필요한 엔드포인트/배포 이름 등 값이 담긴 `.env` 파일 작성 (API 키는 사용하지 않음)
 - 검색 인덱스 생성 및 샘플 데이터 업로드
 - Zava DIY 데이터셋과 온톨로지로 Fabric Lakehouse 설정
 

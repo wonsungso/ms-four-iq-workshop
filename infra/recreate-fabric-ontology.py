@@ -16,7 +16,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from azure.core.credentials import AzureKeyCredential
+from azure.identity import DefaultAzureCredential
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import (
     FabricOntologyKnowledgeSource,
@@ -65,8 +65,8 @@ def load_create_lakehouse_module():
     return module
 
 
-def rebind_fabric_knowledge_source(search_endpoint: str, admin_key: str, workspace_id: str, ontology_id: str) -> None:
-    credential = AzureKeyCredential(admin_key)
+def rebind_fabric_knowledge_source(search_endpoint: str, workspace_id: str, ontology_id: str) -> None:
+    credential = DefaultAzureCredential()
     client = SearchIndexClient(endpoint=search_endpoint, credential=credential)
 
     knowledge_source = FabricOntologyKnowledgeSource(
@@ -99,12 +99,11 @@ def main() -> int:
     workspace_id = _strip_quotes(os.getenv("FABRIC_WORKSPACE_ID"))
     lakehouse_name = _strip_quotes(os.getenv("LAKEHOUSE_NAME")) or DEFAULT_LAKEHOUSE_NAME
     search_endpoint = _strip_quotes(os.getenv("AZURE_SEARCH_SERVICE_ENDPOINT"))
-    search_admin_key = _strip_quotes(os.getenv("AZURE_SEARCH_ADMIN_KEY"))
 
     if not workspace_id:
         raise RuntimeError("FABRIC_WORKSPACE_ID is required in .env")
-    if not args.skip_rebind and (not search_endpoint or not search_admin_key):
-        raise RuntimeError("AZURE_SEARCH_SERVICE_ENDPOINT and AZURE_SEARCH_ADMIN_KEY are required for rebinding")
+    if not args.skip_rebind and not search_endpoint:
+        raise RuntimeError("AZURE_SEARCH_SERVICE_ENDPOINT is required in .env for rebinding")
 
     raw_name = args.ontology_name.strip() if args.ontology_name else generate_default_ontology_name()
     ontology_name = sanitize_ontology_name(raw_name)
@@ -139,7 +138,6 @@ def main() -> int:
     if not args.skip_rebind:
         rebind_fabric_knowledge_source(
             search_endpoint=search_endpoint,
-            admin_key=search_admin_key,
             workspace_id=workspace_id,
             ontology_id=ontology["id"],
         )

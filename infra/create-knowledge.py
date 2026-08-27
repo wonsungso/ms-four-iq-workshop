@@ -5,7 +5,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from azure.core.credentials import AzureKeyCredential
+from azure.identity.aio import DefaultAzureCredential
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.search.documents.indexes.models import SearchIndex
@@ -13,8 +13,7 @@ from azure.search.documents.indexes.models import SearchIndex
 load_dotenv(override=True)
 
 endpoint = os.environ["AZURE_SEARCH_SERVICE_ENDPOINT"]
-admin_key = os.getenv("AZURE_SEARCH_ADMIN_KEY")
-credential = AzureKeyCredential(admin_key)
+credential = DefaultAzureCredential()
 
 azure_openai_endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
 
@@ -29,7 +28,7 @@ def log_message(message, log_file=LOG_FILE):
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(f"[{timestamp}] {message}\n")
 
-async def restore_index(endpoint: str, index_name: str, index_file: str, records_file: str, azure_openai_endpoint: str, credential: AzureKeyCredential):
+async def restore_index(endpoint: str, index_name: str, index_file: str, records_file: str, azure_openai_endpoint: str, credential: DefaultAzureCredential):
     default_path = str(Path(__file__).parent.parent / "data" / "index-data")
     
     try:
@@ -176,6 +175,8 @@ async def main():
     log_message("="*80)
     log_message("Script execution completed")
     log_message("="*80)
+
+    await credential.close()
 
 
 if __name__ == "__main__":

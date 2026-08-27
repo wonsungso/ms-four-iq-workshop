@@ -1,42 +1,13 @@
 """
 Write all environment variables needed by notebooks into the repo root .env file.
-Fetches API keys (not available as Bicep outputs) via the management REST API
-using AzureDeveloperCliCredential (azd token) - no az CLI required.
+
+Entra ID-only auth: no API keys are fetched or written. Notebooks authenticate to
+Azure AI Search and Azure OpenAI (via Search's managed identity for vectorizers)
+using DefaultAzureCredential, relying on the RBAC role assignments granted in
+main.bicep.
 """
 import os
 from pathlib import Path
-
-import requests
-from azure.identity import AzureDeveloperCliCredential
-
-# Fetch API keys via management REST API
-cred = AzureDeveloperCliCredential()
-token = cred.get_token("https://management.azure.com/.default").token
-
-sub = os.environ["AZURE_SUBSCRIPTION_ID"]
-rg = os.environ["AZURE_RESOURCE_GROUP"]
-headers = {"Authorization": f"Bearer {token}"}
-
-
-def post(url):
-    response = requests.post(url, headers=headers, timeout=120)
-    response.raise_for_status()
-    return response.json()
-
-
-search_name = os.environ["AZURE_SEARCH_SERVICE_NAME"]
-search_key = post(
-    f"https://management.azure.com/subscriptions/{sub}/resourceGroups/{rg}"
-    f"/providers/Microsoft.Search/searchServices/{search_name}"
-    f"/listAdminKeys?api-version=2023-11-01"
-)["primaryKey"]
-
-openai_name = os.environ["AZURE_OPENAI_SERVICE_NAME"]
-openai_key = post(
-    f"https://management.azure.com/subscriptions/{sub}/resourceGroups/{rg}"
-    f"/providers/Microsoft.CognitiveServices/accounts/{openai_name}"
-    f"/listKeys?api-version=2023-05-01"
-)["key1"]
 
 # Preserve a real WEB_IQ_KEY across re-runs (this script rewrites .env from
 # scratch every time postprovision runs, so a manually-added key would
@@ -51,16 +22,14 @@ if env_path.exists():
                 web_iq_key = existing_value
             break
 
-# Write .env with all values
+# Write .env with all values (no API keys - Entra ID auth only)
 env_path.write_text(
     f"""\
 # Azure AI Search Configuration
 AZURE_SEARCH_SERVICE_ENDPOINT={os.environ['AZURE_SEARCH_SERVICE_ENDPOINT']}
-AZURE_SEARCH_ADMIN_KEY={search_key}
 
 # Azure OpenAI Configuration
 AZURE_OPENAI_ENDPOINT={os.environ['AZURE_OPENAI_ENDPOINT']}
-AZURE_OPENAI_KEY={openai_key}
 AZURE_OPENAI_CHATGPT_DEPLOYMENT={os.environ['AZURE_OPENAI_CHATGPT_DEPLOYMENT']}
 AZURE_OPENAI_CHATGPT_MODEL_NAME=gpt-5.4
 AZURE_OPENAI_EMBEDDING_DEPLOYMENT={os.environ['AZURE_OPENAI_EMBEDDING_DEPLOYMENT']}
@@ -77,4 +46,4 @@ WEB_IQ_KEY={web_iq_key}
     encoding="utf-8",
 )
 
-print("Created .env file")
+print("Created .env file (Entra ID auth only, no API keys)")

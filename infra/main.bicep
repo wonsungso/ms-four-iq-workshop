@@ -83,12 +83,8 @@ resource searchService 'Microsoft.Search/searchServices@2023-11-01' = {
     encryptionWithCmk: {
       enforcement: 'Unspecified'
     }
-    disableLocalAuth: false
-    authOptions: {
-      aadOrApiKey: {
-        aadAuthFailureMode: 'http401WithBearerChallenge'
-      }
-    }
+    // Entra ID-only auth: no API keys are issued or accepted by this service.
+    disableLocalAuth: true
     semanticSearch: 'standard'
   }
   identity: {
@@ -195,7 +191,8 @@ resource microsoftFoundryAccount 'Microsoft.CognitiveServices/accounts@2025-04-0
     allowProjectManagement: true
     customSubDomainName: resourceNames.microsoftFoundry
     publicNetworkAccess: 'Enabled'
-    disableLocalAuth: false
+    // Entra ID-only auth: no API keys are issued or accepted by this account.
+    disableLocalAuth: true
     networkAcls: {
       defaultAction: 'Allow'
       virtualNetworkRules: []
