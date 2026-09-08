@@ -68,7 +68,7 @@ var resourceNames = {
 @description('Azure AI Search service for vector search and document indexing')
 resource searchService 'Microsoft.Search/searchServices@2023-11-01' = {
   name: resourceNames.searchService
-  location: 'westcentralus'
+  location: location
   sku: {
     name: searchServiceSku
   }
