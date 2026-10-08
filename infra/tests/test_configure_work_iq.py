@@ -28,7 +28,7 @@ class ConfigureWorkIQTests(unittest.TestCase):
             "api": {"oauth2PermissionScopes": [{"id": SCOPE, "value": "access_as_user", "isEnabled": True}]},
         }
         self.client = {
-            "appId": CLIENT, "publicClient": {"redirectUris": ["http://localhost"]},
+            "appId": CLIENT, "isFallbackPublicClient": True,
             "requiredResourceAccess": [{"resourceAppId": API, "resourceAccess": [{"id": SCOPE, "type": "Scope"}]}],
         }
         self.fic = {
@@ -68,12 +68,17 @@ class ConfigureWorkIQTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.discover()
 
-    def test_client_permission_and_redirect_are_required(self):
-        for key in ("publicClient", "requiredResourceAccess"):
+    def test_client_permission_and_public_client_flow_are_required(self):
+        for key in ("isFallbackPublicClient", "requiredResourceAccess"):
             original = self.client.pop(key)
             with self.assertRaises(ValueError):
                 self.discover()
             self.client[key] = original
+
+    def test_disabled_public_client_flow_has_actionable_guidance(self):
+        self.client["isFallbackPublicClient"] = False
+        with self.assertRaisesRegex(ValueError, "Allow public client flows"):
+            self.discover()
 
     def test_system_assigned_identity_is_required(self):
         self.identity = {"tenantId": TENANT, "userAssignedIdentities": {

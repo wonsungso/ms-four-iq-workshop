@@ -94,16 +94,11 @@ az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 1. [Microsoft Entra 관리 센터](https://entra.microsoft.com/)의 **앱 등록** → **새 등록**에서 `fouriq-workiq-client`를 만듭니다. 계정 유형은 **이 조직 디렉터리의 계정만**을 선택합니다.
 2. **API 사용 권한** → **권한 추가** → **조직에서 사용하는 API**에서 `fouriq-workiq-api`를 검색합니다.
 3. **위임된 권한**에서 `access_as_user`를 추가하고 **관리자 동의 부여**를 클릭합니다.
-4. **앱 등록**에서 `fouriq-workiq-client`를 열고 왼쪽 **인증(미리 보기)** (Authentication (Preview))를 선택합니다. **리디렉션 URI 구성** (Redirect URI configuration) 탭의 **리디렉션 URI 추가** (Add Redirect URI)를 클릭합니다.
-5. 오른쪽 패널에서 **모바일 및 데스크톱 애플리케이션** (Mobile and desktop applications) 카드의 **선택** (Select)을 누릅니다. **사용자 지정 리디렉션 URI** 입력란에 `http://localhost`를 입력하고 **구성** (Configure)을 누릅니다. 이미 등록돼 있다면 추가하지 않습니다.
+4. **앱 등록**에서 `fouriq-workiq-client`를 열고 **인증(미리 보기)** (Authentication (Preview))의 **설정** (Settings) 탭을 선택합니다. **퍼블릭 클라이언트 흐름 허용** (Allow public client flows)을 **예**로 설정하고 **저장**합니다. 구형 화면에서는 **인증 → 고급 설정**에 있습니다.
 
-> **엔터프라이즈 앱**이 아니라 **앱 등록** 안의 로그인 앱에서 설정합니다. 구형 화면에서는 **인증 → 플랫폼 추가**로 표시됩니다. `http://localhost:8400`도 이 localhost 설정으로 허용됩니다.
+> **엔터프라이즈 앱**이 아니라 **앱 등록** 안의 로그인 앱에서 설정합니다. Part 4/6은 브라우저에 코드를 입력하는 디바이스 코드 로그인을 사용합니다. 리디렉션 URI는 필요하지 않으며, 기존 `http://localhost` 설정은 남겨두어도 됩니다. [공식 설정 안내](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-configuration#enable-public-client-flow)
 
 <img src="img/workiq_client_permissions.png" alt="로그인 앱의 access_as_user 권한과 관리자 동의" width="650"/>
-
-<img src="img/workiq_client_authentication.png" alt="로그인 앱의 인증 미리 보기 메뉴와 리디렉션 URI 추가 버튼" width="650"/>
-
-<img src="img/workiq_client_platform_selection.png" alt="플랫폼 선택 패널의 모바일 및 데스크톱 애플리케이션 카드" width="450"/>
 
 #### 노트북 연결 및 검증
 
@@ -115,6 +110,7 @@ Part 4/6은 `2026-08-01-preview` API를 사용합니다. 필요한 SDK와 MSAL�
 |---|---|
 | `AI credits access is not configured for this user` | 2번의 결제 정책에서 Work IQ API, 사용자 포함 여부, 지출 한도 확인 |
 | 관리자 동의 또는 로그인 오류 | 3-2와 3-3의 위임 권한 및 관리자 동의 확인 |
+| 디바이스 코드 로그인 또는 환경 변수 자동 설정 오류 | 3-3의 로그인 앱에서 **Allow public client flows**가 **예**인지 확인. 테넌트 정책에서 차단하면 관리자에게 문의 |
 | Federated Credential 오류 | Part 4 시작 준비의 Search principal ID와 자격 증명 ID 확인 |
 | CLI의 `TokenCreatedWithOutdatedPolicies` | 대상 테넌트에 다시 로그인. 계속 실패하면 관리자에게 로그인 로그 확인 요청 |
 

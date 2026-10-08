@@ -1,11 +1,9 @@
 """Customer-app user assertions for Work IQ's delegated OBO flow."""
 
-from getpass import getpass
 import os
 import re
 import shutil
 import subprocess
-from urllib.parse import parse_qs, urlparse
 from uuid import UUID
 
 import msal
@@ -49,34 +47,6 @@ def login_azure_cli(subscription: str = "") -> None:
     print("Search를 배포한 구독인지 확인하세요. 다르면 subscription에 구독 ID 또는 이름을 입력하고 다시 실행하세요.")
 
 
-def callback_response(callback: str, state: str) -> dict[str, str]:
-    try:
-        parsed = urlparse(callback.strip())
-        valid_address = (
-            parsed.scheme == "http" and parsed.hostname == "localhost"
-            and parsed.port == 8400 and parsed.path in ("", "/") and not parsed.fragment
-        )
-    except ValueError:
-        valid_address = False
-    if not valid_address:
-        raise ValueError(
-            "로그인 후 브라우저 주소창의 http://localhost:8400/?code=...&state=... 전체 주소를 복사하세요. "
-            "처음 출력된 로그인 링크나 Codespaces의 전달된 포트 주소는 입력하지 마세요."
-        )
-    params = parse_qs(parsed.query)
-    if any(len(values) != 1 for values in params.values()):
-        raise ValueError("주소에 중복된 로그인 정보가 있습니다. 주소창의 전체 주소를 다시 복사하세요.")
-    response = {key: values[0] for key, values in params.items()}
-    if not response.get("state") or not (response.get("code") or response.get("error")):
-        raise ValueError(
-            "로그인 완료 정보가 없는 주소입니다. 로그인 후 code와 state가 포함된 전체 주소를 복사하세요. "
-            "http://localhost:8400 만 입력하면 안 됩니다."
-        )
-    if response["state"] != state:
-        raise ValueError("이전 로그인 주소입니다. 이번 셀에서 출력한 링크로 로그인한 뒤 새 주소를 복사하세요.")
-    return response
-
-
 def required_guid(name: str) -> str:
     value = os.environ.get(name, "").strip()
     try:
@@ -105,35 +75,24 @@ class WorkIQUserCredential:
             if accounts else None
         )
         if not result or "access_token" not in result:
-            # The manual loopback callback also works when the notebook runs in Codespaces.
-            flow = self.app.initiate_auth_code_flow(
-                scopes=[self.scope],
-                redirect_uri="http://localhost:8400",
-                prompt="select_account",
-            )
-            if "auth_uri" not in flow:
-                raise RuntimeError("Work IQ 로그인을 시작하지 못했습니다. 앱 설정을 확인하고 다시 실행하세요.")
-            print("Work IQ: 아래 링크를 열고 데모 이메일이 있는 Microsoft 365 계정으로 로그인하세요.")
-            print(flow["auth_uri"])
-            print(
-                "로그인 후 브라우저 주소창의 http://localhost:8400/?code=...&state=... 전체 주소를 "
-                "복사해 아래 입력란에 붙여 넣고 Enter를 누르세요. 연결 오류 화면이어도 괜찮습니다. "
-                "Codespaces 포트는 열 필요가 없습니다. 이 주소를 공유하거나 저장하지 마세요."
-            )
-            for attempt in range(3):
-                callback = getpass("로그인 후 전체 주소 붙여넣기 (입력 내용 숨김): ")
-                try:
-                    response = callback_response(callback, flow["state"])
-                except ValueError as exc:
-                    print(str(exc))
-                    if attempt == 2:
-                        raise ValueError("주소를 3회 확인하지 못했습니다. 셀을 다시 실행해 로그인하세요.") from None
-                else:
-                    break
-            # MSAL verifies state and redeems the code with its generated PKCE verifier.
-            result = self.app.acquire_token_by_auth_code_flow(flow, response)
+            flow = self.app.initiate_device_flow(scopes=[self.scope])
+            if not all(flow.get(key) for key in ("device_code", "user_code", "verification_uri")):
+                error = flow.get("error", "invalid_device_flow")
+                description = flow.get("error_description", "로그인 코드를 받지 못했습니다.")
+                raise RuntimeError(
+                    "Work IQ 로그인 시작 실패. 로그인 앱의 '퍼블릭 클라이언트 흐름 허용'과 "
+                    f"테넌트의 디바이스 코드 로그인 정책을 확인하세요: {error}: {description}"
+                )
+            print("Work IQ: 데모 이메일이 있는 Microsoft 365 계정으로 로그인하세요.", flush=True)
+            device_code_prompt(flow["verification_uri"], flow["user_code"], flow.get("expires_at"))
+            print("브라우저에서 로그인을 완료하면 이 셀이 자동으로 계속됩니다. 코드를 공유하지 마세요.", flush=True)
+            result = self.app.acquire_token_by_device_flow(flow)
         if not result or "access_token" not in result:
             error = (result or {}).get("error", "no_token")
             description = (result or {}).get("error_description", "로그인 결과를 받지 못했습니다.")
-            raise RuntimeError(f"Work IQ 로그인 실패. 앱 권한과 관리자 동의를 확인하세요: {error}: {description}")
+            raise RuntimeError(
+                "Work IQ 로그인 실패. 로그인 앱의 '퍼블릭 클라이언트 흐름 허용'을 켜고 "
+                "앱 권한과 관리자 동의를 확인하세요. 테넌트 정책에서 디바이스 코드 로그인을 "
+                f"차단한다면 관리자에게 문의하세요: {error}: {description}"
+            )
         return result["access_token"]

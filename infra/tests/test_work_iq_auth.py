@@ -29,8 +29,11 @@ class WorkIQAuthTests(unittest.TestCase):
         self.app = self.factory.start().return_value
         self.addCleanup(self.factory.stop)
         self.app.get_accounts.return_value = []
-        self.app.initiate_auth_code_flow.return_value = {"auth_uri": "https://login.example", "state": "s"}
-        self.app.acquire_token_by_auth_code_flow.return_value = {"access_token": "assertion"}
+        self.app.initiate_device_flow.return_value = {
+            "verification_uri": "https://microsoft.com/devicelogin",
+            "user_code": "ABC123", "device_code": "private-device-code", "expires_at": 123,
+        }
+        self.app.acquire_token_by_device_flow.return_value = {"access_token": "assertion"}
         self.credential = auth.WorkIQUserCredential(
             tenant_id=TENANT_ID, client_id=CLIENT_ID, application_id=APP_ID,
         )
@@ -43,94 +46,80 @@ class WorkIQAuthTests(unittest.TestCase):
         with patch.dict(auth.os.environ, {"WORK_IQ_CLIENT_ID": CLIENT_ID}):
             self.assertEqual(auth.required_guid("WORK_IQ_CLIENT_ID"), CLIENT_ID)
 
-    def test_pkce_flow_uses_customer_scope_and_does_not_print_assertion(self):
-        with patch.object(auth, "getpass", return_value="http://localhost:8400/?code=c&state=s"), \
-             patch("builtins.print") as output:
+    def test_device_flow_uses_customer_scope_and_does_not_print_secrets(self):
+        with patch("builtins.print") as output:
             self.assertEqual(self.credential.get_assertion(), "assertion")
-        self.app.initiate_auth_code_flow.assert_called_once_with(
+        self.app.initiate_device_flow.assert_called_once_with(
             scopes=[f"api://{APP_ID}/access_as_user"],
-            redirect_uri="http://localhost:8400", prompt="select_account",
         )
-        self.app.acquire_token_by_auth_code_flow.assert_called_once_with(
-            self.app.initiate_auth_code_flow.return_value, {"code": "c", "state": "s"},
+        self.app.acquire_token_by_device_flow.assert_called_once_with(
+            self.app.initiate_device_flow.return_value,
         )
         self.assertNotIn("assertion", str(output.call_args_list))
-        self.assertNotIn("code=c", str(output.call_args_list))
+        self.assertNotIn("private-device-code", str(output.call_args_list))
+        self.assertNotIn("localhost", str(output.call_args_list))
+        self.assertIn("코드 ABC123", str(output.call_args_list))
+        self.app.initiate_auth_code_flow.assert_not_called()
 
     def test_cached_token_is_refreshed_before_another_login(self):
         self.app.get_accounts.return_value = [{"home_account_id": "test"}]
         self.app.acquire_token_silent_with_error.return_value = {"access_token": "renewed"}
         self.assertEqual(self.credential.get_assertion(), "renewed")
-        self.app.initiate_auth_code_flow.assert_not_called()
+        self.app.initiate_device_flow.assert_not_called()
 
     def test_silent_error_requires_reauthentication(self):
         self.app.get_accounts.return_value = [{"home_account_id": "test"}]
         self.app.acquire_token_silent_with_error.return_value = {"error": "interaction_required"}
-        with patch.object(auth, "getpass", return_value="http://localhost:8400/?code=c&state=s"), \
-             patch("builtins.print"):
+        with patch("builtins.print"):
             self.assertEqual(self.credential.get_assertion(), "assertion")
 
-    def test_invalid_callback_is_rejected_before_redemption(self):
-        for callback in (
-            "https://evil.example/?code=c&state=s",
-            "https://codespace-8400.app.github.dev/?code=c&state=s",
-            "https://login.microsoftonline.com/tenant/oauth2/v2.0/authorize",
-            "http://localhost:8400",
-            "http://localhost:8400/complete",
-            "http://localhost:wrong/?code=c&state=s",
-            "http://localhost:8400/?code=c",
-            "http://localhost:8400/?state=s",
-            "http://localhost:8400/?code=c&state=s&state=other",
-            "http://localhost:8400/?code=c&state=s#unexpected",
-        ):
-            with self.subTest(callback=callback), \
-                 patch.object(auth, "getpass", return_value=callback), patch("builtins.print"):
-                with self.assertRaises(ValueError):
+    def test_device_flow_start_errors_stop_before_polling(self):
+        self.app.initiate_device_flow.return_value = {
+            "error": "invalid_client", "error_description": "App not found",
+        }
+        with patch("builtins.print"):
+            with self.assertRaisesRegex(RuntimeError, "invalid_client"):
+                self.credential.get_assertion()
+        self.app.acquire_token_by_device_flow.assert_not_called()
+
+    def test_incomplete_device_flow_is_rejected(self):
+        self.app.initiate_device_flow.return_value = {"user_code": "ABC123"}
+        with self.assertRaisesRegex(RuntimeError, "invalid_device_flow"):
+            self.credential.get_assertion()
+        self.app.acquire_token_by_device_flow.assert_not_called()
+
+    def test_device_flow_expiry_denial_and_public_client_errors_are_not_success(self):
+        for error in ("expired_token", "authorization_declined", "invalid_client"):
+            self.app.acquire_token_by_device_flow.return_value = {
+                "error": error, "error_description": "Detailed provider error",
+            }
+            with self.subTest(error=error), patch("builtins.print"):
+                with self.assertRaisesRegex(RuntimeError, error):
                     self.credential.get_assertion()
-        self.app.acquire_token_by_auth_code_flow.assert_not_called()
 
-    def test_state_validation_failure_is_not_swallowed(self):
-        self.app.acquire_token_by_auth_code_flow.side_effect = ValueError("state mismatch")
-        with patch.object(auth, "getpass", return_value="http://localhost:8400/?code=c&state=s"), \
-             patch("builtins.print"):
-            with self.assertRaisesRegex(ValueError, "state mismatch"):
+    def test_polling_exception_is_not_swallowed(self):
+        self.app.acquire_token_by_device_flow.side_effect = RuntimeError("network failed")
+        with patch("builtins.print"):
+            with self.assertRaisesRegex(RuntimeError, "network failed"):
                 self.credential.get_assertion()
-
-    def test_bad_paste_can_be_corrected_without_restarting_login(self):
-        callbacks = [
-            "http://localhost:8400",
-            "http://localhost:8400/?code=old&state=old",
-            "  http://localhost:8400/?code=c&state=s  ",
-        ]
-        with patch.object(auth, "getpass", side_effect=callbacks) as prompt, \
-             patch("builtins.print") as output:
-            self.assertEqual(self.credential.get_assertion(), "assertion")
-        self.assertEqual(prompt.call_count, 3)
-        self.app.initiate_auth_code_flow.assert_called_once()
-        self.assertNotIn("code=old", str(output.call_args_list))
-        self.assertNotIn("code=c", str(output.call_args_list))
-        self.assertIn("이전 로그인 주소", str(output.call_args_list))
-
-    def test_wrong_state_is_never_redeemed(self):
-        with patch.object(auth, "getpass", return_value="http://localhost:8400/?code=c&state=wrong"), \
-             patch("builtins.print"):
-            with self.assertRaisesRegex(ValueError, "3회"):
-                self.credential.get_assertion()
-        self.app.acquire_token_by_auth_code_flow.assert_not_called()
 
     def test_consent_error_is_not_success(self):
-        self.app.acquire_token_by_auth_code_flow.return_value = {
+        self.app.acquire_token_by_device_flow.return_value = {
             "error": "access_denied", "error_description": "Admin consent required",
         }
-        with patch.object(auth, "getpass", return_value="http://localhost:8400/?error=access_denied&state=s"), \
-             patch("builtins.print"):
+        with patch("builtins.print"):
             with self.assertRaisesRegex(RuntimeError, "access_denied"):
                 self.credential.get_assertion()
 
 
 class NotebookWorkIQTests(unittest.TestCase):
     def source(self, part, cell_id):
-        name = "part4-work-iq-to-kb.ipynb" if part == 4 else "part6-work-iq-fabric-iq-to-kb.ipynb"
+        name = {
+            3: "part3-fabric-iq-to-kb.ipynb",
+            4: "part4-work-iq-to-kb.ipynb",
+            5: "part5-except-workiq-kb.ipynb",
+            6: "part6-work-iq-fabric-iq-to-kb.ipynb",
+        }[part]
         nb = json.loads((ROOT / "notebooks" / name).read_text(encoding="utf-8"))
         return "".join(next(c["source"] for c in nb["cells"] if c["id"] == cell_id))
 
@@ -147,9 +136,34 @@ class NotebookWorkIQTests(unittest.TestCase):
     def test_login_cells_call_shared_cli_login_for_both_parts(self):
         for part, cell_id in ((4, "a4c11f01"), (6, "a6c11f01")):
             with self.subTest(part=part), patch.dict("sys.modules", {"work_iq_auth": auth}), \
+                 patch("importlib.reload", return_value=auth) as reload, \
                  patch.object(auth, "login_azure_cli") as login:
                 exec(self.source(part, cell_id), {})
+                reload.assert_called_once_with(auth)
                 login.assert_called_once_with("")
+
+    def test_login_cells_refresh_stale_module_before_using_new_function(self):
+        for part, cell_id in ((4, "a4c11f01"), (6, "a6c11f01")):
+            stale = SimpleNamespace()
+            login = Mock()
+
+            def refresh(module):
+                self.assertIs(module, stale)
+                module.login_azure_cli = login
+                return module
+
+            with self.subTest(part=part), patch.dict("sys.modules", {"work_iq_auth": stale}), \
+                 patch("importlib.reload", side_effect=refresh):
+                exec(self.source(part, cell_id), {})
+            login.assert_called_once_with("")
+
+    def test_login_cells_explain_outdated_file_after_reload(self):
+        for part, cell_id in ((4, "a4c11f01"), (6, "a6c11f01")):
+            stale = SimpleNamespace()
+            with self.subTest(part=part), patch.dict("sys.modules", {"work_iq_auth": stale}), \
+                 patch("importlib.reload", return_value=stale):
+                with self.assertRaisesRegex(RuntimeError, "git pull --ff-only"):
+                    exec(self.source(part, cell_id), {})
 
     def test_fabric_device_login_uses_korean_prompt(self):
         credential = Mock()
@@ -161,6 +175,46 @@ class NotebookWorkIQTests(unittest.TestCase):
             exec(self.source(6, "60e73b50"), context)
         self.assertIs(factory.call_args.kwargs["prompt_callback"], auth.device_code_prompt)
         factory.return_value.get_token.assert_called_once_with("https://search.azure.com/.default")
+
+    def test_other_fabric_parts_use_same_korean_prompt(self):
+        for part, cell_id in ((3, "b26670fa"), (5, "0359e3aa")):
+            with self.subTest(part=part), patch.dict("sys.modules", {"work_iq_auth": auth}), \
+                 patch("azure.identity.DeviceCodeCredential") as factory, patch("builtins.print"):
+                exec(self.source(part, cell_id), {"AZURE_TENANT_ID": TENANT_ID})
+            self.assertIs(factory.call_args.kwargs["prompt_callback"], auth.device_code_prompt)
+            factory.return_value.get_token.assert_called_once_with("https://search.azure.com/.default")
+
+    def test_work_iq_login_cells_use_shared_device_flow_credential(self):
+        for part, cell_id in ((4, "01889729"), (6, "60e73b50")):
+            context = {
+                "WORK_IQ_TENANT_ID": TENANT_ID, "WORK_IQ_CLIENT_ID": CLIENT_ID,
+                "WORK_IQ_APPLICATION_ID": APP_ID, "AZURE_TENANT_ID": TENANT_ID,
+                "WorkIQUserCredential": Mock(return_value=Mock()),
+            }
+            with self.subTest(part=part), patch.dict("sys.modules", {"work_iq_auth": auth}), \
+                 patch("azure.identity.DeviceCodeCredential"), patch("builtins.print"):
+                exec(self.source(part, cell_id), context)
+            context["WorkIQUserCredential"].assert_called_once_with(
+                tenant_id=TENANT_ID, client_id=CLIENT_ID, application_id=APP_ID,
+            )
+            context["WorkIQUserCredential"].return_value.get_assertion.assert_called_once_with()
+
+    def test_demo_email_login_preserves_graph_client_and_uses_korean_prompt(self):
+        tree = ast.parse(self.source(4, "46755bcf"))
+        assignment = next(
+            node for node in tree.body if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "graph_credential"
+                    for target in node.targets)
+        )
+        factory = Mock()
+        exec(compile(ast.Module(body=[assignment], type_ignores=[]), "<email-login>", "exec"), {
+            "DeviceCodeCredential": factory, "AZURE_TENANT_ID": TENANT_ID,
+            "device_code_prompt": auth.device_code_prompt,
+        })
+        factory.assert_called_once_with(
+            tenant_id=TENANT_ID, prompt_callback=auth.device_code_prompt,
+            client_id="14d82eec-204b-4c2f-b7e8-296a70dab67e",
+        )
 
     def test_source_configuration_roundtrip_for_both_parts(self):
         for part, cell_id in ((4, "9504b339"), (6, "f27502fc")):
@@ -234,9 +288,12 @@ class NotebookWorkIQTests(unittest.TestCase):
                     self.assertTrue(next(p for p in params if p["knowledgeSourceName"] == "fabric-ontology-knowledge-source")["neverQuerySource"])
 
     def test_notebooks_parse_and_have_no_saved_outputs(self):
-        for part in (4, 6):
-            name = "part4-work-iq-to-kb.ipynb" if part == 4 else "part6-work-iq-fabric-iq-to-kb.ipynb"
-            nb = json.loads((ROOT / "notebooks" / name).read_text(encoding="utf-8"))
+        for path in (ROOT / "notebooks").glob("part*.ipynb"):
+            nb = json.loads(path.read_text(encoding="utf-8"))
+            cell_ids = [c["id"] for c in nb["cells"] if "id" in c]
+            self.assertEqual(len(set(cell_ids)), len(cell_ids))
+            self.assertIn('print("환경 변수를 불러왔습니다.")',
+                          "".join("".join(c["source"]) for c in nb["cells"]))
             for cell in nb["cells"]:
                 if cell["cell_type"] == "code":
                     ast.parse("".join(cell["source"]))

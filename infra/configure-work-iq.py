@@ -80,7 +80,7 @@ class Graph:
         escaped = name.replace("'", "''")
         return only(self.collection("applications", {
             "$filter": f"displayName eq '{escaped}'",
-            "$select": "id,appId,identifierUris,api,publicClient,requiredResourceAccess",
+            "$select": "id,appId,identifierUris,api,isFallbackPublicClient,requiredResourceAccess",
         }), f"app named {name!r}")
 
 
@@ -115,8 +115,12 @@ def discover(graph, tenant_id, endpoint, api_name, client_name):
         for r in permissions
     ):
         raise ValueError("로그인 앱에 연결 앱의 access_as_user 권한을 추가하세요.")
-    if "http://localhost" not in client.get("publicClient", {}).get("redirectUris", []):
-        raise ValueError("로그인 앱의 모바일/데스크톱 리디렉션 URI로 http://localhost를 등록하세요.")
+    if client.get("isFallbackPublicClient") is not True:
+        raise ValueError(
+            f"{client_name}의 인증 설정에서 '퍼블릭 클라이언트 흐름 허용' "
+            "(Allow public client flows)을 '예'로 설정하고 저장하세요. "
+            "디바이스 코드 로그인에 필요합니다."
+        )
     credentials = graph.collection(f"applications/{guid(api['id'])}/federatedIdentityCredentials")
     credential = only([
         c for c in credentials
