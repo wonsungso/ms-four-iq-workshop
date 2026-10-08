@@ -95,7 +95,7 @@ class ConfigureWorkIQTests(unittest.TestCase):
         result = Mock(returncode=1, stderr="ERROR: AuthorizationFailed")
         with patch.object(setup.shutil, "which", return_value="az"), \
              patch.object(setup.subprocess, "run", return_value=result):
-            with self.assertRaisesRegex(RuntimeError, "Azure CLI failed: ERROR: AuthorizationFailed"):
+            with self.assertRaisesRegex(RuntimeError, "Azure CLI 실행 실패: ERROR: AuthorizationFailed"):
                 setup.az_json("resource", "list")
 
     def test_missing_cli_login_does_not_write_env(self):
@@ -126,6 +126,11 @@ class ConfigureWorkIQTests(unittest.TestCase):
             self.assertEqual(dotenv_values(path)["WEB_IQ_KEY"], "test-value")
             for key, value in settings.items():
                 self.assertEqual(dotenv_values(path)[key], value)
+            self.assertIn("\n\n# Work IQ Configuration\n", path.read_text(encoding="utf-8"))
+            setup.save_settings(path, settings)
+            self.assertEqual(path.read_text(encoding="utf-8").count("# Work IQ Configuration"), 1)
+            for key in settings:
+                self.assertEqual(path.read_text(encoding="utf-8").count(f"{key}="), 1)
             saved = path.read_bytes()
             with patch.object(setup, "set_key", side_effect=OSError("write failed")):
                 with self.assertRaises(OSError):
@@ -154,7 +159,7 @@ class ConfigureWorkIQTests(unittest.TestCase):
         with patch.object(setup.Graph, "__init__", return_value=None):
             graph = setup.Graph(TENANT)
             with patch.object(graph, "collection", return_value=[self.api, self.api]):
-                with self.assertRaisesRegex(ValueError, "found 2"):
+                with self.assertRaisesRegex(ValueError, "2개를 찾았습니다"):
                     graph.app("api")
 
     def test_graph_authorization_error_is_not_app_missing(self):
@@ -172,7 +177,7 @@ class ConfigureWorkIQTests(unittest.TestCase):
             response = Mock()
             response.json.return_value = {"value": [self.api], "@odata.nextLink": "https://example.com/next"}
             graph.session.get.return_value = response
-            with self.assertRaisesRegex(ValueError, "pagination URL"):
+            with self.assertRaisesRegex(ValueError, "다음 페이지 주소"):
                 graph.collection("applications")
             self.assertEqual([c[0] for c in graph.session.method_calls], ["get"])
 
@@ -195,6 +200,10 @@ class ConfigureWorkIQTests(unittest.TestCase):
             saved = dotenv_values(path)
             for key, value in settings.items():
                 self.assertEqual(saved[key], value)
+            self.assertIn("\n\n# Work IQ Configuration\n", path.read_text(encoding="utf-8"))
+            with patch.dict("os.environ", env), patch("builtins.print"):
+                runpy.run_path(str(script))
+            self.assertEqual(path.read_text(encoding="utf-8").count("# Work IQ Configuration"), 1)
 
 
 if __name__ == "__main__":

@@ -54,7 +54,10 @@ WEB_IQ_KEY={web_iq_key}
     encoding="utf-8",
 )
 
-for key, value in work_iq_settings.items():
-    set_key(env_path, key, value)
+if work_iq_settings:
+    with env_path.open("a", encoding="utf-8") as stream:
+        stream.write("\n# Work IQ Configuration\n")
+    for key, value in work_iq_settings.items():
+        set_key(env_path, key, value)
 
 print("Created .env file (Entra ID auth only, no API keys)")

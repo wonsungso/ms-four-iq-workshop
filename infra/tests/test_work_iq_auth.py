@@ -73,6 +73,11 @@ class WorkIQAuthTests(unittest.TestCase):
     def test_invalid_callback_is_rejected_before_redemption(self):
         for callback in (
             "https://evil.example/?code=c&state=s",
+            "https://codespace-8400.app.github.dev/?code=c&state=s",
+            "https://login.microsoftonline.com/tenant/oauth2/v2.0/authorize",
+            "http://localhost:8400",
+            "http://localhost:8400/complete",
+            "http://localhost:wrong/?code=c&state=s",
             "http://localhost:8400/?code=c",
             "http://localhost:8400/?state=s",
             "http://localhost:8400/?code=c&state=s&state=other",
@@ -86,10 +91,32 @@ class WorkIQAuthTests(unittest.TestCase):
 
     def test_state_validation_failure_is_not_swallowed(self):
         self.app.acquire_token_by_auth_code_flow.side_effect = ValueError("state mismatch")
-        with patch.object(auth, "getpass", return_value="http://localhost:8400/?code=c&state=wrong"), \
+        with patch.object(auth, "getpass", return_value="http://localhost:8400/?code=c&state=s"), \
              patch("builtins.print"):
             with self.assertRaisesRegex(ValueError, "state mismatch"):
                 self.credential.get_assertion()
+
+    def test_bad_paste_can_be_corrected_without_restarting_login(self):
+        callbacks = [
+            "http://localhost:8400",
+            "http://localhost:8400/?code=old&state=old",
+            "  http://localhost:8400/?code=c&state=s  ",
+        ]
+        with patch.object(auth, "getpass", side_effect=callbacks) as prompt, \
+             patch("builtins.print") as output:
+            self.assertEqual(self.credential.get_assertion(), "assertion")
+        self.assertEqual(prompt.call_count, 3)
+        self.app.initiate_auth_code_flow.assert_called_once()
+        self.assertNotIn("code=old", str(output.call_args_list))
+        self.assertNotIn("code=c", str(output.call_args_list))
+        self.assertIn("이전 로그인 주소", str(output.call_args_list))
+
+    def test_wrong_state_is_never_redeemed(self):
+        with patch.object(auth, "getpass", return_value="http://localhost:8400/?code=c&state=wrong"), \
+             patch("builtins.print"):
+            with self.assertRaisesRegex(ValueError, "3회"):
+                self.credential.get_assertion()
+        self.app.acquire_token_by_auth_code_flow.assert_not_called()
 
     def test_consent_error_is_not_success(self):
         self.app.acquire_token_by_auth_code_flow.return_value = {
@@ -116,6 +143,24 @@ class NotebookWorkIQTests(unittest.TestCase):
             "HRDOCS_INDEX": "hrdocs", "HEALTHDOCS_INDEX": "healthdocs",
             "FABRIC_WORKSPACE_ID": TENANT_ID, "FABRIC_ONTOLOGY_ID": APP_ID, "WEB_IQ_KEY": "test",
         }
+
+    def test_login_cells_call_shared_cli_login_for_both_parts(self):
+        for part, cell_id in ((4, "a4c11f01"), (6, "a6c11f01")):
+            with self.subTest(part=part), patch.dict("sys.modules", {"work_iq_auth": auth}), \
+                 patch.object(auth, "login_azure_cli") as login:
+                exec(self.source(part, cell_id), {})
+                login.assert_called_once_with("")
+
+    def test_fabric_device_login_uses_korean_prompt(self):
+        credential = Mock()
+        context = {"WORK_IQ_TENANT_ID": TENANT_ID, "WORK_IQ_CLIENT_ID": CLIENT_ID,
+                   "WORK_IQ_APPLICATION_ID": APP_ID, "AZURE_TENANT_ID": TENANT_ID,
+                   "WorkIQUserCredential": Mock(return_value=credential)}
+        with patch.dict("sys.modules", {"work_iq_auth": auth}), \
+             patch("azure.identity.DeviceCodeCredential") as factory, patch("builtins.print"):
+            exec(self.source(6, "60e73b50"), context)
+        self.assertIs(factory.call_args.kwargs["prompt_callback"], auth.device_code_prompt)
+        factory.return_value.get_token.assert_called_once_with("https://search.azure.com/.default")
 
     def test_source_configuration_roundtrip_for_both_parts(self):
         for part, cell_id in ((4, "9504b339"), (6, "f27502fc")):
@@ -203,6 +248,56 @@ class NotebookWorkIQTests(unittest.TestCase):
             intents=[KnowledgeRetrievalSemanticIntent(search="demo")],
         ).as_dict()
         self.assertEqual(wire["intents"], [{"search": "demo", "type": "semantic"}])
+
+
+class AzureCLILoginTests(unittest.TestCase):
+    def setUp(self):
+        self.process = Mock()
+        self.process.stdout = iter([
+            "To sign in, use a web browser to open the page https://microsoft.com/devicelogin "
+            "and enter the code ABC123 to authenticate.\n",
+        ])
+        self.process.wait.return_value = 0
+        self.popen = patch.object(auth.subprocess, "Popen")
+        self.launch = self.popen.start()
+        self.launch.return_value.__enter__.return_value = self.process
+        self.addCleanup(self.popen.stop)
+
+    def test_streamed_device_prompt_and_subscription_selection(self):
+        with patch.object(auth.shutil, "which", return_value="az"), \
+             patch.object(auth.subprocess, "run", return_value=Mock(stdout="workshop\n")) as run, \
+             patch("builtins.print") as output:
+            auth.login_azure_cli(" subscription-id ")
+        self.assertEqual(self.launch.call_args.args[0],
+                         ["az", "login", "--use-device-code", "--output", "none"])
+        self.assertEqual(self.launch.call_args.kwargs["env"]["AZURE_CORE_LOGIN_EXPERIENCE_V2"], "off")
+        self.assertEqual(self.launch.call_args.kwargs["stdin"], auth.subprocess.DEVNULL)
+        self.assertEqual(run.call_args_list[0].args[0],
+                         ["az", "account", "set", "--subscription", "subscription-id"])
+        self.assertIn("코드 ABC123", str(output.call_args_list))
+        self.assertNotIn("To sign in", str(output.call_args_list))
+
+    def test_default_subscription_is_not_changed(self):
+        with patch.object(auth.shutil, "which", return_value="az"), \
+             patch.object(auth.subprocess, "run", return_value=Mock(stdout="workshop\n")) as run, \
+             patch("builtins.print"):
+            auth.login_azure_cli()
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0][1:3], ["account", "show"])
+
+    def test_failed_login_stops_before_subscription_access(self):
+        self.process.wait.return_value = 1
+        with patch.object(auth.shutil, "which", return_value="az"), \
+             patch.object(auth.subprocess, "run") as run, patch("builtins.print"):
+            with self.assertRaisesRegex(RuntimeError, "로그인이 실패"):
+                auth.login_azure_cli()
+        run.assert_not_called()
+
+    def test_missing_cli_has_korean_guidance(self):
+        with patch.object(auth.shutil, "which", return_value=None):
+            with self.assertRaisesRegex(RuntimeError, "Azure CLI가 없습니다"):
+                auth.login_azure_cli()
+        self.launch.assert_not_called()
 
 
 if __name__ == "__main__":
