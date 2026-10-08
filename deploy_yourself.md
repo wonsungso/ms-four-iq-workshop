@@ -45,16 +45,20 @@ Work IQ를 사용하려면 결제 정책에 **Work IQ API** 서비스와 **실�
 
 테넌트 활성화는 Global Administrator가 수행합니다. 앱 등록과 권한 동의는 앱 등록 권한 및 관리자 동의 권한이 있는 관리자에게 요청하세요.
 
-아래 3-1, 3-2, 3-4는 미리 진행할 수 있습니다. **3-3은 Azure 배포 후** Search 리소스가 생성되면 진행하세요. [공식 설정 문서](https://learn.microsoft.com/en-us/azure/search/agentic-knowledge-source-how-to-work-iq?pivots=python#configure-the-work-iq-app-registration)
+배포 전에는 아래 **테넌트 활성화와 앱 등록**만 완료하세요. Search 연결과 환경 변수 설정은 **Part 4 시작 부분**에서 진행합니다. [공식 설정 문서](https://learn.microsoft.com/en-us/azure/search/agentic-knowledge-source-how-to-work-iq?pivots=python#configure-the-work-iq-app-registration)
 
 #### 3-1. Work IQ 테넌트 활성화
 
 1. [Microsoft Entra 관리 센터](https://entra.microsoft.com/)에서 **Entra ID** → **엔터프라이즈 앱** → **모든 애플리케이션**을 엽니다.
-2. 애플리케이션 유형 필터를 **모든 애플리케이션**으로 바꾸고, 아래 ID로 Work IQ API를 찾습니다.
+2. **애플리케이션 유형** 필터를 **모든 애플리케이션**으로 바꿉니다. 왼쪽 검색창은 앱 이름 검색용이므로 비워두세요. 오른쪽 **애플리케이션 ID 시작** 필터를 클릭해 아래 ID를 입력하고 **적용**을 누릅니다.
 
 ```text
 fdcc1f02-fc51-4226-8753-f668596af7f7
 ```
+
+빨간 테두리의 필터 2개를 설정하면 아래처럼 **Work IQ**가 표시됩니다. 화면의 개체 ID는 예시 값입니다.
+
+<img src="img/workiq_enterprise_app_search.png" alt="모든 애플리케이션 유형과 애플리케이션 ID 시작 필터로 Work IQ를 찾은 결과" width="650"/>
 
 3. 앱이 있으면 **속성**에서 **사용자가 로그인할 수 있도록 설정됨**을 `예`로 설정합니다.
 4. 앱이 없다면 Global Administrator가 터미널에서 다음 명령으로 등록합니다. 로그인된 계정의 테넌트 ID를 `WORK_IQ_TENANT_ID` 환경변수에 자동으로 저장해 사용합니다. 아직 로그인하지 않았다면 먼저 `az login`을 실행하세요.
@@ -74,7 +78,7 @@ az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 #### 3-2. 고객 소유 Work IQ 연결 앱 등록
 
 1. [Microsoft Entra 관리 센터](https://entra.microsoft.com/)의 **Entra ID** → **앱 등록** → **새 등록**에서 `fouriq-workiq-api`를 만듭니다. 계정 유형은 **이 조직 디렉터리의 계정만**을 선택합니다.
-2. **개요**에서 애플리케이션(클라이언트) ID를 확인합니다. 다음 단계의 URI와 3-3의 자격 증명 등록에 사용합니다.
+2. **개요**에서 애플리케이션(클라이언트) ID를 확인합니다. 다음 단계의 URI에 사용합니다.
 3. **API 표시** (Expose an API)에서 Application ID URI를 `api://<연결-앱-ID>`로 설정합니다. **범위 추가**를 눌러 이름을 `access_as_user`, 동의 대상을 **관리자만**, 상태를 **사용**으로 설정합니다.
 4. **API 권한** → **권한 추가** → **조직에서 사용하는 API**에서 Work IQ API를 찾습니다. 3-1의 ID와 같은 앱인지 확인합니다.
 5. **위임된 권한**에서 `WorkIQAgent.Ask`를 추가하고 **관리자 동의 부여**를 클릭합니다.
@@ -85,84 +89,33 @@ az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 
 <img src="img/workiq_api_permissions.png" alt="WorkIQAgent.Ask 위임 권한과 관리자 동의" width="650"/>
 
-#### 3-3. Search 관리 ID와 Federated Credential 연결
-
-Search가 연결 앱을 사용할 수 있도록 권한을 연결하는 단계입니다.
-
-1. [Azure Portal](https://portal.azure.com/)에서 **Azure AI Search** → **ID** (Identity)를 엽니다.
-2. **시스템 할당**을 켜고 Object (principal) ID를 기록합니다.
-3. 아래 내용으로 `credential.json`을 만듭니다. Search의 테넌트 ID와 방금 기록한 principal ID를 넣습니다.
-
-```json
-{
-  "name": "<search-service-name>-identity",
-  "issuer": "https://login.microsoftonline.com/<Search-테넌트-GUID>/v2.0",
-  "subject": "<Search-관리-ID-principal-GUID>",
-  "audiences": ["api://AzureADTokenExchange"]
-}
-```
-
-4. 터미널에서 3-2의 연결 앱에 자격 증명을 등록합니다.
-
-```bash
-az login --tenant "${WORK_IQ_TENANT_ID:?3-1의 테넌트 환경변수를 먼저 설정하세요}" --allow-no-subscriptions
-az ad app federated-credential create --id "<고객-앱-클라이언트-GUID>" --parameters credential.json --query id --output tsv
-```
-
-5. 등록이 성공했는지 확인합니다. 자격 증명 ID는 아래 자동 설정 명령이 찾아주므로 따로 기록하지 않아도 됩니다.
-
-이미 등록했다면 새로 만들지 않고 기존 연결을 확인합니다.
-
-```bash
-az ad app federated-credential list --id "<고객-앱-클라이언트-GUID>" --query "[].{id:id,name:name,issuer:issuer,subject:subject,audiences:audiences}" --output json
-```
-
-[Microsoft Entra 관리 센터](https://entra.microsoft.com/)의 **연결 앱** → **인증서 및 비밀** → **페더레이션 자격 증명**에서 등록 결과를 확인할 수 있습니다.
-
-<img src="img/workiq_federated_credential.png" alt="Search 관리 ID와 페더레이션 자격 증명 연결 설정" width="550"/>
-
-> 화면의 Object ID와 Subject identifier는 Search 관리 ID입니다. 실습에 필요한 자격 증명 ID는 아래 자동 설정 명령이 구분해서 저장합니다.
-
-#### 3-4. 사용자 로그인용 클라이언트 앱 구성
+#### 3-3. 사용자 로그인용 클라이언트 앱 구성
 
 1. [Microsoft Entra 관리 센터](https://entra.microsoft.com/)의 **앱 등록** → **새 등록**에서 `fouriq-workiq-client`를 만듭니다. 계정 유형은 **이 조직 디렉터리의 계정만**을 선택합니다.
-2. **API 권한** → **권한 추가** → **조직에서 사용하는 API**에서 `fouriq-workiq-api`를 검색합니다.
+2. **API 사용 권한** → **권한 추가** → **조직에서 사용하는 API**에서 `fouriq-workiq-api`를 검색합니다.
 3. **위임된 권한**에서 `access_as_user`를 추가하고 **관리자 동의 부여**를 클릭합니다.
-4. **인증** → **플랫폼 추가** → **모바일 및 데스크톱 애플리케이션**에서 `http://localhost`를 등록합니다. 노트북에서 사용하는 `http://localhost:8400`도 이 설정으로 허용됩니다.
+4. **앱 등록**에서 `fouriq-workiq-client`를 열고 왼쪽 **인증(미리 보기)** (Authentication (Preview))를 선택합니다. **리디렉션 URI 구성** (Redirect URI configuration) 탭의 **리디렉션 URI 추가** (Add Redirect URI)를 클릭합니다.
+5. 오른쪽 패널에서 **모바일 및 데스크톱 애플리케이션** (Mobile and desktop applications) 카드의 **선택** (Select)을 누릅니다. **사용자 지정 리디렉션 URI** 입력란에 `http://localhost`를 입력하고 **구성** (Configure)을 누릅니다. 이미 등록돼 있다면 추가하지 않습니다.
+
+> **엔터프라이즈 앱**이 아니라 **앱 등록** 안의 로그인 앱에서 설정합니다. 구형 화면에서는 **인증 → 플랫폼 추가**로 표시됩니다. `http://localhost:8400`도 이 localhost 설정으로 허용됩니다.
 
 <img src="img/workiq_client_permissions.png" alt="로그인 앱의 access_as_user 권한과 관리자 동의" width="650"/>
 
-#### 실습 환경 변수와 로그인
+<img src="img/workiq_client_authentication.png" alt="로그인 앱의 인증 미리 보기 메뉴와 리디렉션 URI 추가 버튼" width="650"/>
 
-앱 등록과 Search 연결을 마친 뒤, 저장소 루트의 터미널에서 아래 명령을 실행하세요. **앱 ID를 복사할 필요 없이 `.env`의 값 4개를 자동으로 채웁니다.**
-
-```bash
-python infra/configure-work-iq.py --tenant-id "${WORK_IQ_TENANT_ID:?3-1의 테넌트 환경변수를 먼저 설정하세요}"
-```
-
-3-1에서 지정한 테넌트에서 `fouriq-workiq-api`, `fouriq-workiq-client`를 찾고, 배포된 Search 관리 ID와 일치하는 자격 증명을 확인합니다. 앱·권한·결제 정책은 변경하지 않습니다. 앱이 없거나 이름이 중복되거나 연결 설정이 다르면 오류를 표시하고 `.env`는 변경하지 않습니다.
-
-다른 이름으로 등록했다면 `--api-app-name "<연결 앱 이름>" --client-app-name "<로그인 앱 이름>"`을 붙입니다. 해당 테넌트에 로그인하고 앱 조회 권한이 있어야 합니다. 테넌트가 같다면 환경변수 없이 `python infra/configure-work-iq.py`만 실행해도 현재 Azure CLI 계정에서 테넌트 ID를 가져옵니다.
-
-Part 4/6의 로그인 셀에서 다음 순서로 진행합니다.
-
-1. 출력된 링크를 브라우저에서 열고 Microsoft 365 계정으로 로그인합니다.
-2. 로그인 후 주소창의 전체 `http://localhost:8400/?code=...&state=...` 주소를 복사합니다. localhost 연결 오류가 보여도 주소를 복사하면 됩니다.
-3. 노트북의 **숨김 입력란**에 붙여 넣습니다.
-
-> 콜백 주소에는 일회용 인증 코드가 있습니다. 채팅이나 문서에 공유하지 마세요. 메일 시딩과 Fabric 로그인에도 같은 계정을 사용하세요.
+<img src="img/workiq_client_platform_selection.png" alt="플랫폼 선택 패널의 모바일 및 데스크톱 애플리케이션 카드" width="450"/>
 
 #### 노트북 연결 및 검증
 
-Part 4/6은 `2026-08-01-preview` API를 사용합니다. 필요한 SDK와 MSAL은 초기 환경 설정에서 설치되며, 인증과 지식 소스 설정은 노트북에 포함되어 있습니다. 위 명령을 실행한 뒤 셀을 순서대로 실행하세요.
+Part 4/6은 `2026-08-01-preview` API를 사용합니다. 필요한 SDK와 MSAL은 초기 환경 설정에서 설치됩니다. 배포 후 Part 1부터 순서대로 진행하고, Part 4의 시작 준비에서 Search 연결을 완료하세요. Part 6에서는 같은 설정을 재사용합니다.
 
 조회 결과에 `workIQ` 참조가 있고 활동 로그에 소스 오류가 없으면 성공입니다. 다른 소스의 답변만 나온 부분 응답은 성공으로 처리하지 않습니다.
 
 | 오류 | 확인할 곳 |
 |---|---|
 | `AI credits access is not configured for this user` | 2번의 결제 정책에서 Work IQ API, 사용자 포함 여부, 지출 한도 확인 |
-| 관리자 동의 또는 로그인 오류 | 3-2와 3-4의 위임 권한 및 관리자 동의 확인 |
-| Federated Credential 오류 | 3-3의 Search principal ID와 자격 증명 ID 확인 |
+| 관리자 동의 또는 로그인 오류 | 3-2와 3-3의 위임 권한 및 관리자 동의 확인 |
+| Federated Credential 오류 | Part 4 시작 준비의 Search principal ID와 자격 증명 ID 확인 |
 | CLI의 `TokenCreatedWithOutdatedPolicies` | 대상 테넌트에 다시 로그인. 계속 실패하면 관리자에게 로그인 로그 확인 요청 |
 
 ### 필요한 Azure 권한
@@ -307,7 +260,7 @@ Part 2, Part 4, Part 5, Part 6은 소스 활동에 오류가 있거나 필요한
 
 > ✅ Codespaces로 진행했다면 배포가 모두 끝났습니다. 아래 "로컬 환경에서 배포하기" 섹션은 건너뛰고 바로 노트북을 진행하세요.
 
-Part 4/6을 진행하려면 위 **3-3의 Search 관리 ID 연결**을 완료하고 [환경 변수 자동 설정](#실습-환경-변수와-로그인) 명령을 실행하세요.
+[Part 4의 시작 준비](notebooks/part4-work-iq-to-kb.ipynb#시작-준비-search-관리-id-연결)에서 Search 관리 ID 연결과 환경 변수 자동 설정을 진행합니다. 배포 가이드로 돌아올 필요 없이 노트북 안의 안내를 따라가세요.
 
 VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundry-iq-kb.ipynb](./notebooks/part1-standard-foundry-iq-kb.ipynb) 부터 시작**하세요.
 

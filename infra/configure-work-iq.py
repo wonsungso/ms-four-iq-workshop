@@ -87,7 +87,7 @@ def discover(graph, tenant_id, endpoint, api_name, client_name):
     identity = search.get("identity", {})
     principal = identity.get("principalId")
     if not principal or not identity.get("tenantId"):
-        raise ValueError("Enable the Search system-assigned managed identity as described in section 3-3.")
+        raise ValueError("Enable the Search system-assigned managed identity as described in Part 4 setup.")
     search_tenant = guid(identity["tenantId"])
     api = graph.app(api_name)
     client = graph.app(client_name)

@@ -15,7 +15,7 @@ def required_guid(name: str) -> str:
     except ValueError as exc:
         raise ValueError(
             f"{name} must be an app, tenant or credential GUID. "
-            "Complete deploy_yourself.md section 3, then run "
+            "Complete the Work IQ setup at the start of Part 4, then run "
             "python infra/configure-work-iq.py from the repository root."
         ) from exc
 
