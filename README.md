@@ -15,8 +15,8 @@ Zava(DIY 용품 소매업체) 신입 직원이 되어, Azure AI Search 에이전
 - **Part 2**: Web IQ(MCP)로 실시간 웹 검색 추가
 - **Part 3**: Fabric IQ로 구조화된 제품 데이터 추가
 - **Part 4**: Work IQ로 M365 개인 업무 데이터 추가
-- **Part 5**: Work IQ를 제외한 3개 소스(Foundry IQ + Fabric IQ + Web IQ)를 하나의 지식 베이스로 통합
-- **Part 6**: Work IQ까지 포함한 5개 소스(Foundry IQ + Fabric IQ + Web IQ + Work IQ)를 하나의 지식 베이스로 통합
+- **Part 5**: 3가지 IQ(Foundry IQ + Fabric IQ + Web IQ)의 4개 지식 소스(HR 문서, 건강 문서, Fabric, 웹)를 통합
+- **Part 6**: 4가지 IQ(Foundry IQ + Fabric IQ + Web IQ + Work IQ)의 5개 지식 소스를 통합
 
 <img src="img/microsoft_iq.png" alt="Part 6: 5개 지식 소스 통합 워크플로우" width="700"/>
 
@@ -27,7 +27,7 @@ Zava(DIY 용품 소매업체) 신입 직원이 되어, Azure AI Search 에이전
 - **Foundry IQ**: 업로드된 파일이나 미리 구축된 검색 인덱스를 질의하는 기본 지식 소스(문서/정책 등 비정형 콘텐츠)
 - **Web IQ**: MCP 서버를 통해 실시간 웹 검색 결과와 인용을 가져오는 지식 소스
 
-이 워크샵의 모든 Part는 각자 새로운 지식 소스를 다루는 것처럼 보이지만, 실제로는 **하나의 Azure AI Search 지식 베이스(Foundry IQ)** 위에 지식 소스를 하나씩 추가해 나가는 과정입니다. Azure AI Search의 에이전트형 검색이 그 지식 베이스를 통해 여러 Microsoft IQ(Work IQ, Fabric IQ, Web IQ)를 오케스트레이션하고, 인용 기반의 통합된 답변으로 합성합니다.
+이 워크샵은 **같은 Azure AI Search 서비스**에서 Part별 지식 베이스를 만들며 소스 구성을 확장하는 과정입니다. Part 2~4는 두 문서 소스에 각각 Web IQ, Fabric IQ, Work IQ를 추가하고, Part 5/6에서 이들을 통합합니다. Azure AI Search의 에이전트형 검색이 여러 소스를 오케스트레이션하고 인용 기반 답변을 합성합니다. Part 5/6의 실습 코드는 안정적인 Fabric 조회를 위해 Fabric 질문과 나머지 질문을 별도로 호출한 뒤 두 답변을 함께 표시합니다.
 
 ```mermaid
 flowchart LR
@@ -59,7 +59,7 @@ flowchart LR
 ### 💻 사용 기술
 
 1. Foundry IQ (Azure AI Search)
-1. Azure OpenAI (gpt-5.4-mini, text-embedding-3-large)
+1. Azure OpenAI (gpt-5.4, text-embedding-3-large)
 1. Model Context Protocol (MCP)
 1. Microsoft Fabric IQ 및 Work IQ
 1. Python 및 Jupyter Notebooks

@@ -173,11 +173,11 @@ azd up
 이 명령은 다음을 수행합니다.
 
 - 모든 Azure 리소스 프로비저닝 (AI Search, Foundry 프로젝트, OpenAI 모델, Fabric 용량)
-- Entra ID 인증에 필요한 엔드포인트/배포 이름 등 값이 담긴 `.env` 파일 작성 (API 키는 사용하지 않음)
+- 엔드포인트와 모델 배포 이름 등 설정값이 담긴 `.env` 파일 작성 (Azure 서비스는 Entra ID 인증을 사용하며 Web IQ API 키는 별도 설정)
 - 검색 인덱스 생성 및 샘플 데이터 업로드
 - Zava DIY 데이터셋과 온톨로지로 Fabric Lakehouse 설정
 
-> **참고:** 이메일 시딩(Part 4 - Work IQ용)은 `Mail.Send` 애플리케이션 권한이 있는 서비스 주체가 필요하며 직접 배포 시에는 **실행되지 않습니다**. Part 4에서는 대신 본인의 Mail 데이터를 사용합니다.
+> **참고:** 배포 과정에서는 데모 이메일을 보내지 않습니다. Part 4의 이메일 준비 셀에서 본인의 Microsoft 365 계정으로 로그인하고 Microsoft Graph의 `User.Read`와 `Mail.Send` 위임 권한에 동의해 데모 이메일 3통을 본인 메일함으로 보냅니다. 테넌트 정책에 따라 관리자 동의가 필요할 수 있습니다.
 
 ### (중요) azd up 진행 중 해야 할 일: Fabric IQ Ontology 기능 활성화
 
@@ -294,8 +294,10 @@ python -m pip install -r notebooks/requirements.txt
 
 > **참고 (Windows):** Windows에서는 `venv`가 실행 파일을 `bin/`이 아닌 `Scripts/`에 생성합니다.
 >
-> ```bash
-> source .venv/Scripts/activate
+> ```powershell
+> python -m venv .venv
+> .\.venv\Scripts\Activate.ps1
+> python -m pip install -r notebooks/requirements.txt
 > ```
 
 노트북을 열기 전에 패키지를 설치하고, 노트북의 Python 환경으로 `.venv`를 선택하세요. 실습용 SDK `azure-search-documents==12.1.0b2`도 함께 설치됩니다.
