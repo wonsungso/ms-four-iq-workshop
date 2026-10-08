@@ -310,6 +310,7 @@ class NotebookValidationTests(unittest.TestCase):
                         context = {
                             "knowledge_base_client": client,
                             "fabric_request": object(), "user_token": "test-user-token",
+                            "fabric_user_credential": Mock(),
                             "json": json, "time": time,
                         }
                         with patch.object(time, "sleep"), patch("builtins.print"):

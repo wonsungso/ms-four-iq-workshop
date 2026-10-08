@@ -8,11 +8,19 @@ main.bicep.
 """
 import os
 from pathlib import Path
+from dotenv import dotenv_values, set_key
 
 # Preserve a real WEB_IQ_KEY across re-runs (this script rewrites .env from
 # scratch every time postprovision runs, so a manually-added key would
 # otherwise be wiped out on the next `azd up` / postprovision retry).
 env_path = Path(__file__).parents[1] / ".env"
+work_iq_settings = {
+    key: value for key, value in dotenv_values(env_path).items()
+    if key in (
+        "WORK_IQ_TENANT_ID", "WORK_IQ_APPLICATION_ID",
+        "WORK_IQ_CLIENT_ID", "WORK_IQ_FEDERATED_CREDENTIAL_ID",
+    ) and value
+}
 web_iq_key = "your-web-iq-key"
 if env_path.exists():
     for line in env_path.read_text(encoding="utf-8").splitlines():
@@ -45,5 +53,8 @@ WEB_IQ_KEY={web_iq_key}
 """,
     encoding="utf-8",
 )
+
+for key, value in work_iq_settings.items():
+    set_key(env_path, key, value)
 
 print("Created .env file (Entra ID auth only, no API keys)")

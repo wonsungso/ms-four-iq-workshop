@@ -7,9 +7,9 @@
 - 리소스를 생성할 수 있는 충분한 권한이 있는 **Azure 구독**
 - **GitHub 계정** (GitHub Codespaces 사용)
 - **Microsoft Fabric Free Plan 가입** (Fabric Capacity 배포에 필요)
-- 각 최종 사용자를 위한 **Microsoft 365 Copilot 라이선스** (Work IQ 질의에 필요)
-- **Work IQ API 지출(Spending) 활성화** (Part 4/5 실습에 필요, Microsoft 365 관리 센터에서 설정)
-- **Work IQ 액세스 요청** (Part 4/5 실습에 필요, Microsoft 승인 필요 - 승인까지 시간이 걸리므로 미리 신청 권장)
+- **Work IQ 사용량 기반 billing plan 및 조회 사용자 연결** (Part 4/6 실습에 필요)
+- **Work IQ API 지출(Spending) 활성화** (Part 4/6 실습에 필요, Microsoft 365 관리 센터에서 설정)
+- **Work IQ 테넌트 활성화 및 고객 소유 앱 등록** (Part 4/6 실습에 필요, 아래 3번 절차 참고)
 
 > 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#대안-로컬-환경에서-배포하기) 섹션의 추가 요구 사항을 참고하세요.
 
@@ -26,56 +26,144 @@
 
 <img src="img/signup_fabric_2.png" alt="Microsoft Fabric Free Plan 가입 완료 화면" width="400"/>
 
-### 2. Work IQ API 지출(Spending) 활성화 (Part 4/5 Work IQ 실습에 필요)
+### 2. Work IQ API 지출(Spending) 활성화 (Part 4/6 Work IQ 실습에 필요)
 
-Work IQ API는 Microsoft 365 Copilot의 사용량 기반 결제(usage-based billing/AI 크레딧) 대상 서비스입니다. 
-이 설정이 활성화되어 있지 않으면 Part 4/5 노트북에서 Work IQ를 질의할 때 다음과 같은 오류가 발생할 수 있습니다.
-
-> `WorkIQ A2A call failed with status code Forbidden.`
-
-**활성화 절차** (Global administrator 또는 Billing administrator 권한 필요):
+Work IQ를 사용하려면 결제 정책에 **Work IQ API** 서비스와 **실습할 사용자**를 포함해야 합니다. Global Administrator 또는 Billing Administrator가 설정합니다.
 
 1. [Microsoft 365 관리 센터의 Copilot 비용 관리(Cost Management) 페이지](https://admin.cloud.microsoft/#/copilot/costmanagement/configuration)로 이동합니다.
 2. **Copilot** → **Cost Management**에서 **Get Started**를 선택합니다.
 3. "조직을 위한 기본 지출 정책 활성화" 패널에서 결제 방법(Azure 구독, 없으면 자동 생성 가능), 월별 지출 한도, 알림 등을 설정한 뒤 **Activate**를 클릭합니다.
-4. 활성화 후 **Agents and services**에 **Work IQ API**가 포함되어 있는지 확인합니다.
+4. **Agents and services**에서 **Work IQ API**를 선택하고, 정책 대상에 실습할 사용자를 포함합니다.
 
 <img src="img/m365_admin_copilot_workiq_enable.png" alt="Microsoft 365 관리 센터에서 Work IQ API 지출 활성화" width="700"/>
 
-> **참고:** 활성화 후 실제로 반영되기까지 **전파 지연(propagation delay)** 이 있을 수 있습니다. 
+> 설정이 반영되기까지 시간이 걸릴 수 있습니다.
 
-### 3. Work IQ 액세스 요청 (Part 4/5 Work IQ 실습에 필요)
+### 3. Work IQ 테넌트 활성화 및 앱 등록 (Part 4/6 Work IQ 실습에 필요)
 
-Work IQ 검색은 기본적으로 꺼져 있으며, **Microsoft의 승인을 받은 요청이 있어야만** 사용할 수 있습니다. 아래 절차를 미리 완료하지 않으면 Part 4/5 노트북에서 Work IQ 지식 소스를 만들 때 다음과 같은 오류가 발생합니다.
+앱 2개를 등록합니다. 하나는 **Search가 Work IQ에 연결할 앱**, 다른 하나는 **사용자가 로그인할 앱**입니다. 클라이언트 비밀은 필요하지 않습니다.
 
-> `HttpResponseError: Work IQ knowledge sources are not enabled for this subscription. Please visit https://aka.ms/enable-work-iq-ks to learn more.`
+테넌트 활성화는 Global Administrator가 수행합니다. 앱 등록과 권한 동의는 앱 등록 권한 및 관리자 동의 권한이 있는 관리자에게 요청하세요.
 
-**Work IQ 액세스 요청 절차** (참고: [Create a Work IQ Knowledge Source](https://learn.microsoft.com/azure/search/agentic-knowledge-source-how-to-work-iq#request-access-to-work-iq-retrieval)):
+아래 3-1, 3-2, 3-4는 미리 진행할 수 있습니다. **3-3은 Azure 배포 후** Search 리소스가 생성되면 진행하세요. [공식 설정 문서](https://learn.microsoft.com/en-us/azure/search/agentic-knowledge-source-how-to-work-iq?pivots=python#configure-the-work-iq-app-registration)
 
-1. 구독에 `EnableFoundryIQWithWorkIQ` 기능 플래그를 등록합니다(구독의 **Owner** 또는 **Contributor** 역할 필요).
+#### 3-1. Work IQ 테넌트 활성화
 
-    ```bash
-    az feature register --namespace Microsoft.Search --name EnableFoundryIQWithWorkIQ --subscription "<내-구독-GUID>"
-    ```
+1. Microsoft Entra 관리 센터에서 **Entra ID** → **엔터프라이즈 앱** → **모든 애플리케이션**을 엽니다.
+2. 애플리케이션 유형 필터를 **모든 애플리케이션**으로 바꾸고, 아래 ID로 Work IQ API를 찾습니다.
 
-2. `Microsoft.Search` 리소스 공급자를 다시 등록합니다.
+```text
+fdcc1f02-fc51-4226-8753-f668596af7f7
+```
 
-    ```bash
-    az provider register -n Microsoft.Search --subscription "<내-구독-GUID>"
-    ```
+3. 앱이 있으면 **속성**에서 **사용자가 로그인할 수 있도록 설정됨**을 `예`로 설정합니다.
+4. 앱이 없다면 Global Administrator가 터미널에서 다음 명령으로 등록합니다. 로그인된 계정의 테넌트 ID를 `WORK_IQ_TENANT_ID` 환경변수에 자동으로 저장해 사용합니다. 아직 로그인하지 않았다면 먼저 `az login`을 실행하세요.
 
-3. 테넌트의 **Microsoft Entra 관리자**가 [Work IQ 액세스 요청 양식](https://aka.ms/foundry-iq-work-iq-admin-consent-form)을 제출합니다.
-
-4. Microsoft가 요청을 검토하고 승인할 때까지 기다립니다. **이 승인은 즉시 처리되지 않습니다.**
-
-**추가 전제 조건**
-- Azure AI Search 서비스, Work IQ 환경, 최종 사용자가 모두 **동일한 Microsoft Entra 테넌트**에 있어야 합니다.
-
-기능 플래그 상태가 `Registered`인지 아래 명령으로 확인할 수 있습니다.
+**Codespaces / Bash**
 
 ```bash
-az feature show --namespace Microsoft.Search --name EnableFoundryIQWithWorkIQ --subscription "<내-구독-GUID>" --query "properties.state"
+export WORK_IQ_TENANT_ID="$(az account show --query tenantId --output tsv)"
+az login --tenant "${WORK_IQ_TENANT_ID:?테넌트 ID를 가져오지 못했습니다}" --allow-no-subscriptions
+az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 ```
+
+> Microsoft 365와 Azure 구독의 테넌트가 다르다면, **Entra ID → 개요 → 테넌트 ID**에서 Microsoft 365 테넌트 ID를 확인해 `export WORK_IQ_TENANT_ID="<Microsoft-365-테넌트-ID>"`로 지정하세요. 이 변수는 현재 터미널에서만 유지됩니다. 로그인 오류나 권한 오류는 앱이 없다는 뜻이 아닙니다.
+
+참고: [Work IQ 테넌트 활성화](https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/work-iq/enable-work-iq)
+
+#### 3-2. 고객 소유 Work IQ 연결 앱 등록
+
+1. **Entra ID** → **앱 등록** → **새 등록**에서 `fouriq-workiq-api`를 만듭니다. 계정 유형은 **이 조직 디렉터리의 계정만**을 선택합니다.
+2. **개요**에서 애플리케이션(클라이언트) ID를 확인합니다. 다음 단계의 URI와 3-3의 자격 증명 등록에 사용합니다.
+3. **API 표시** (Expose an API)에서 Application ID URI를 `api://<연결-앱-ID>`로 설정합니다. **범위 추가**를 눌러 이름을 `access_as_user`, 동의 대상을 **관리자만**, 상태를 **사용**으로 설정합니다.
+4. **API 권한** → **권한 추가** → **조직에서 사용하는 API**에서 Work IQ API를 찾습니다. 3-1의 ID와 같은 앱인지 확인합니다.
+5. **위임된 권한**에서 `WorkIQAgent.Ask`를 추가하고 **관리자 동의 부여**를 클릭합니다.
+
+빨간 테두리의 설정과 동의 상태를 확인하세요. 화면의 식별자는 예시 값입니다.
+
+<img src="img/workiq_expose_api.png" alt="연결 앱의 access_as_user 범위 설정" width="650"/>
+
+<img src="img/workiq_api_permissions.png" alt="WorkIQAgent.Ask 위임 권한과 관리자 동의" width="650"/>
+
+#### 3-3. Search 관리 ID와 Federated Credential 연결
+
+Search가 연결 앱을 사용할 수 있도록 권한을 연결하는 단계입니다.
+
+1. Azure Portal에서 **Azure AI Search** → **ID** (Identity)를 엽니다.
+2. **시스템 할당**을 켜고 Object (principal) ID를 기록합니다.
+3. 아래 내용으로 `credential.json`을 만듭니다. Search의 테넌트 ID와 방금 기록한 principal ID를 넣습니다.
+
+```json
+{
+  "name": "<search-service-name>-identity",
+  "issuer": "https://login.microsoftonline.com/<Search-테넌트-GUID>/v2.0",
+  "subject": "<Search-관리-ID-principal-GUID>",
+  "audiences": ["api://AzureADTokenExchange"]
+}
+```
+
+4. 터미널에서 3-2의 연결 앱에 자격 증명을 등록합니다.
+
+```bash
+az login --tenant "${WORK_IQ_TENANT_ID:?3-1의 테넌트 환경변수를 먼저 설정하세요}" --allow-no-subscriptions
+az ad app federated-credential create --id "<고객-앱-클라이언트-GUID>" --parameters credential.json --query id --output tsv
+```
+
+5. 등록이 성공했는지 확인합니다. 자격 증명 ID는 아래 자동 설정 명령이 찾아주므로 따로 기록하지 않아도 됩니다.
+
+이미 등록했다면 새로 만들지 않고 기존 연결을 확인합니다.
+
+```bash
+az ad app federated-credential list --id "<고객-앱-클라이언트-GUID>" --query "[].{id:id,name:name,issuer:issuer,subject:subject,audiences:audiences}" --output json
+```
+
+포털의 **연결 앱** → **인증서 및 비밀** → **페더레이션 자격 증명**에서 등록 결과를 확인할 수 있습니다.
+
+<img src="img/workiq_federated_credential.png" alt="Search 관리 ID와 페더레이션 자격 증명 연결 설정" width="550"/>
+
+> 화면의 Object ID와 Subject identifier는 Search 관리 ID입니다. 실습에 필요한 자격 증명 ID는 아래 자동 설정 명령이 구분해서 저장합니다.
+
+#### 3-4. 사용자 로그인용 클라이언트 앱 구성
+
+1. **앱 등록** → **새 등록**에서 `fouriq-workiq-client`를 만듭니다. 계정 유형은 **이 조직 디렉터리의 계정만**을 선택합니다.
+2. **API 권한** → **권한 추가** → **조직에서 사용하는 API**에서 `fouriq-workiq-api`를 검색합니다.
+3. **위임된 권한**에서 `access_as_user`를 추가하고 **관리자 동의 부여**를 클릭합니다.
+4. **인증** → **플랫폼 추가** → **모바일 및 데스크톱 애플리케이션**에서 `http://localhost`를 등록합니다. 노트북에서 사용하는 `http://localhost:8400`도 이 설정으로 허용됩니다.
+
+<img src="img/workiq_client_permissions.png" alt="로그인 앱의 access_as_user 권한과 관리자 동의" width="650"/>
+
+#### 실습 환경 변수와 로그인
+
+앱 등록과 Search 연결을 마친 뒤, 저장소 루트의 터미널에서 아래 명령을 실행하세요. **앱 ID를 복사할 필요 없이 `.env`의 값 4개를 자동으로 채웁니다.**
+
+```bash
+python infra/configure-work-iq.py --tenant-id "${WORK_IQ_TENANT_ID:?3-1의 테넌트 환경변수를 먼저 설정하세요}"
+```
+
+3-1에서 지정한 테넌트에서 `fouriq-workiq-api`, `fouriq-workiq-client`를 찾고, 배포된 Search 관리 ID와 일치하는 자격 증명을 확인합니다. 앱·권한·결제 정책은 변경하지 않습니다. 앱이 없거나 이름이 중복되거나 연결 설정이 다르면 오류를 표시하고 `.env`는 변경하지 않습니다.
+
+다른 이름으로 등록했다면 `--api-app-name "<연결 앱 이름>" --client-app-name "<로그인 앱 이름>"`을 붙입니다. 해당 테넌트에 로그인하고 앱 조회 권한이 있어야 합니다. 테넌트가 같다면 환경변수 없이 `python infra/configure-work-iq.py`만 실행해도 현재 Azure CLI 계정에서 테넌트 ID를 가져옵니다.
+
+Part 4/6의 로그인 셀에서 다음 순서로 진행합니다.
+
+1. 출력된 링크를 브라우저에서 열고 Microsoft 365 계정으로 로그인합니다.
+2. 로그인 후 주소창의 전체 `http://localhost:8400/?code=...&state=...` 주소를 복사합니다. localhost 연결 오류가 보여도 주소를 복사하면 됩니다.
+3. 노트북의 **숨김 입력란**에 붙여 넣습니다.
+
+> 콜백 주소에는 일회용 인증 코드가 있습니다. 채팅이나 문서에 공유하지 마세요. 메일 시딩과 Fabric 로그인에도 같은 계정을 사용하세요.
+
+#### 노트북 연결 및 검증
+
+Part 4/6은 `2026-08-01-preview` API를 사용합니다. 필요한 SDK와 MSAL은 초기 환경 설정에서 설치되며, 인증과 지식 소스 설정은 노트북에 포함되어 있습니다. 위 명령을 실행한 뒤 셀을 순서대로 실행하세요.
+
+조회 결과에 `workIQ` 참조가 있고 활동 로그에 소스 오류가 없으면 성공입니다. 다른 소스의 답변만 나온 부분 응답은 성공으로 처리하지 않습니다.
+
+| 오류 | 확인할 곳 |
+|---|---|
+| `AI credits access is not configured for this user` | 2번의 결제 정책에서 Work IQ API, 사용자 포함 여부, 지출 한도 확인 |
+| 관리자 동의 또는 로그인 오류 | 3-2와 3-4의 위임 권한 및 관리자 동의 확인 |
+| Federated Credential 오류 | 3-3의 Search principal ID와 자격 증명 ID 확인 |
+| CLI의 `TokenCreatedWithOutdatedPolicies` | 대상 테넌트에 다시 로그인. 계속 실패하면 관리자에게 로그인 로그 확인 요청 |
 
 ### 필요한 Azure 권한
 
@@ -101,7 +189,7 @@ az feature show --namespace Microsoft.Search --name EnableFoundryIQWithWorkIQ --
 - GitHub에서 [wonsungso/ms-four-iq-workshop](https://github.com/wonsungso/ms-four-iq-workshop) 리포지토리로 이동해 우측 상단 **Fork** 버튼으로 본인 계정에 Fork합니다
 - Fork된 **본인 리포지토리**(`https://github.com/<본인-계정>/ms-four-iq-workshop`)로 이동합니다
 - **Code → Codespaces 탭 → "Create codespace on main"** 을 클릭합니다
-- 컨테이너가 빌드되는 동안 잠시 기다립니다(`notebooks/requirements.txt`가 자동으로 설치됩니다)
+- 컨테이너가 빌드되는 동안 잠시 기다립니다. 실습에 필요한 SDK(`azure-search-documents==12.1.0b2`)와 패키지가 자동으로 설치됩니다.
 - Codespace가 열리면 VS Code 웹 또는 데스크톱 앱에서 Terminal을 엽니다(Terminal > New Terminal)
 
 ### 2. azd로 배포
@@ -158,7 +246,9 @@ azd up
 
 > **참고:** 이 설정이 반영되지 않은 채로 `azd up`이 끝나면 postprovision 단계에서 Fabric Lakehouse/테이블은 생성되지만 **Ontology 생성만 실패**할 수 있습니다. 아래 "(Troubleshooting) Ontology 생성이 실패했다면" 항목을 참고해 재시도하세요.
 
-#### (Troubleshooting) Ontology 생성이 실패했다면
+<details>
+<summary>(Troubleshooting) Ontology 생성이 실패했다면</summary>
+
 
 `azd up` 완료 후 로그에 `Creating ontology`나 `TooManyRequestsForCapacity`, `FeatureNotAvailable` 관련 오류가 보인다면, 위 테넌트 설정을 켠 뒤 postprovision만 다시 실행하세요. 이때 이전 실행에서 만들어진 **Fabric Workspace ID를 재사용**해야 워크스페이스가 중복 생성되지 않습니다(터미널 로그의 `Workspace created: <ID>` 또는 `Updated repo root .env with FABRIC_WORKSPACE_ID` 줄에서 확인).
 
@@ -171,7 +261,11 @@ azd hooks run postprovision
 
 `ConnectionResetError`나 타임아웃으로 생성 응답을 받지 못해도 Fabric에는 Ontology가 이미 만들어졌을 수 있습니다. 최신 생성 스크립트는 연결 오류가 발생하면 같은 이름의 항목이 실제로 저장됐는지 확인하고 발견된 항목을 재사용합니다. 항목을 찾지 못하면 오류를 그대로 보고합니다. 수동 복구할 때도 포털에서 실제 항목을 먼저 확인하고 해당 ID를 `.env`의 `FABRIC_ONTOLOGY_ID`에 넣어 기존 항목 복구를 실행하세요. 테넌트 기능 설정 오류로 단정하거나 무조건 새 Ontology를 만들지 마세요.
 
-#### (Troubleshooting) Ontology는 있지만 데이터 원본이 없다는 오류
+</details>
+
+<details>
+<summary>(Troubleshooting) Ontology는 있지만 데이터 원본이 없다는 오류</summary>
+
 
 `This ontology has no data sources bound to it yet`는 Ontology 항목 생성과 데이터 바인딩 완료가 서로 다르다는 뜻입니다. 새 경험 Ontology는 [TMDL 정의](https://learn.microsoft.com/rest/api/fabric/articles/item-management/definitions/ontology-definition)를 사용합니다. 구형 JSON 정의를 전송한 뒤 HTTP 성공만 확인하면 빈 Ontology가 남을 수 있습니다.
 
@@ -191,7 +285,11 @@ Part 3 커널을 다시 시작하고 환경 변수 로드부터 실행하세요.
 
 바인딩 검증이 통과했는데 `Something went wrong while loading the ontology definition` 오류가 계속되면 동일한 복구 명령을 반복하거나 리소스를 재생성하지 마세요. Fabric 포털에서 같은 Ontology를 열고 `Product` 엔터티와 데이터 연결을 확인한 뒤, Ontology 에이전트에서 재고 집계 질문을 직접 실행하세요. 엔터티 정의 조회와 자연어 데이터 조회는 서로 다른 검증입니다. 포털에서도 실패하면 Fabric 조회 단계의 원인을 추가로 조사해야 합니다. 포털에서는 성공하고 Search에서만 실패하면 사용자 토큰과 Search 연동을 확인합니다.
 
-#### (Troubleshooting) Web IQ 또는 Work IQ만 실패하는 경우
+</details>
+
+<details>
+<summary>(Troubleshooting) Web IQ 또는 Work IQ만 실패하는 경우</summary>
+
 
 Azure 리소스가 정상 생성돼도 외부 지식 소스의 인증과 사용자 권한이 자동으로 준비되는 것은 아닙니다.
 
@@ -201,11 +299,15 @@ Azure 리소스가 정상 생성돼도 외부 지식 소스의 인증과 사용�
 
 Part 2, Part 4, Part 5, Part 6은 소스 활동에 오류가 있거나 필요한 Web IQ/Work IQ 참조가 없으면 답변 표시 전에 실패를 보고합니다. 내부 문서나 Fabric 답변만 반환됐다고 전체 실습 성공으로 판단하지 않습니다. 워크샵 데이터의 재고 집계 검증 기준은 `HAND TOOLS`, 총 `stockLevel` **1,635**입니다.
 
+</details>
+
 ### 3. 워크샵 시작
 
 <img src="img/provision_completed.png" alt="Provision 완료" width="400"/>
 
 > ✅ Codespaces로 진행했다면 배포가 모두 끝났습니다. 아래 "로컬 환경에서 배포하기" 섹션은 건너뛰고 바로 노트북을 진행하세요.
+
+Part 4/6을 진행하려면 위 **3-3의 Search 관리 ID 연결**을 완료하고 [환경 변수 자동 설정](#실습-환경-변수와-로그인) 명령을 실행하세요.
 
 VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundry-iq-kb.ipynb](./notebooks/part1-standard-foundry-iq-kb.ipynb) 부터 시작**하세요.
 
@@ -231,13 +333,14 @@ git clone https://github.com/wonsungso/ms-four-iq-workshop.git
 cd ms-four-iq-workshop
 ```
 
-### 2. Python 가상 환경 생성
+### 2. Python 가상 환경 생성 및 패키지 설치
 
 Dev Container를 사용하는 경우 이 단계는 건너뛰세요(컨테이너 자체가 격리된 환경입니다).
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+python -m pip install -r notebooks/requirements.txt
 ```
 
 > **참고 (Windows):** Windows에서는 `venv`가 실행 파일을 `bin/`이 아닌 `Scripts/`에 생성합니다.
@@ -245,6 +348,8 @@ source .venv/bin/activate
 > ```bash
 > source .venv/Scripts/activate
 > ```
+
+노트북을 열기 전에 패키지를 설치하고, 노트북의 Python 환경으로 `.venv`를 선택하세요. 실습용 SDK `azure-search-documents==12.1.0b2`도 함께 설치됩니다.
 
 ### 3. azd로 배포 및 워크샵 시작
 
