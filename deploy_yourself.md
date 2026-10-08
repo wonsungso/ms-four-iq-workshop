@@ -8,7 +8,7 @@
 - **GitHub 계정** (GitHub Codespaces 사용)
 - **Microsoft Fabric Free Plan 가입** (Fabric Capacity 배포에 필요)
 - **Work IQ 사용량 기반 billing plan 및 조회 사용자 연결** (Part 4/6 실습에 필요)
-- **Work IQ API 지출(Spending) 활성화** (Part 4/6 실습에 필요, Microsoft 365 관리 센터에서 설정)
+- **Work IQ API 지출(Spending) 활성화** (Part 4/6 실습에 필요, [Microsoft 365 관리 센터](https://admin.cloud.microsoft/)에서 설정)
 - **Work IQ 테넌트 활성화 및 고객 소유 앱 등록** (Part 4/6 실습에 필요, 아래 3번 절차 참고)
 
 > 로컬 환경에서 진행하려면 [로컬 환경에서 배포하기](#대안-로컬-환경에서-배포하기) 섹션의 추가 요구 사항을 참고하세요.
@@ -17,7 +17,7 @@
 
 테넌트/계정이 Microsoft Fabric에 가입되어 있지 않으면 Fabric Capacity 리소스 배포 시 `Unauthorized` 오류가 발생합니다. `azd up`을 실행하기 **전에** 아래 절차로 먼저 가입하세요.
 
-1. [https://app.fabric.microsoft.com/](https://app.fabric.microsoft.com/) 에 접속해 로그인합니다
+1. [Microsoft Fabric](https://app.fabric.microsoft.com/)에 접속해 로그인합니다
 2. 안내에 따라 이메일을 입력하고 Microsoft Fabric free 계정 가입을 완료합니다
 
 <img src="img/signup_fabric.png" alt="Microsoft Fabric Free Plan 가입 화면" width="400"/>
@@ -49,7 +49,7 @@ Work IQ를 사용하려면 결제 정책에 **Work IQ API** 서비스와 **실�
 
 #### 3-1. Work IQ 테넌트 활성화
 
-1. Microsoft Entra 관리 센터에서 **Entra ID** → **엔터프라이즈 앱** → **모든 애플리케이션**을 엽니다.
+1. [Microsoft Entra 관리 센터](https://entra.microsoft.com/)에서 **Entra ID** → **엔터프라이즈 앱** → **모든 애플리케이션**을 엽니다.
 2. 애플리케이션 유형 필터를 **모든 애플리케이션**으로 바꾸고, 아래 ID로 Work IQ API를 찾습니다.
 
 ```text
@@ -67,13 +67,13 @@ az login --tenant "${WORK_IQ_TENANT_ID:?테넌트 ID를 가져오지 못했습�
 az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 ```
 
-> Microsoft 365와 Azure 구독의 테넌트가 다르다면, **Entra ID → 개요 → 테넌트 ID**에서 Microsoft 365 테넌트 ID를 확인해 `export WORK_IQ_TENANT_ID="<Microsoft-365-테넌트-ID>"`로 지정하세요. 이 변수는 현재 터미널에서만 유지됩니다. 로그인 오류나 권한 오류는 앱이 없다는 뜻이 아닙니다.
+> Microsoft 365와 Azure 구독의 테넌트가 다르다면, [Microsoft Entra 관리 센터](https://entra.microsoft.com/)의 **Entra ID → 개요 → 테넌트 ID**에서 Microsoft 365 테넌트 ID를 확인해 `export WORK_IQ_TENANT_ID="<Microsoft-365-테넌트-ID>"`로 지정하세요. 이 변수는 현재 터미널에서만 유지됩니다. 로그인 오류나 권한 오류는 앱이 없다는 뜻이 아닙니다.
 
 참고: [Work IQ 테넌트 활성화](https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/work-iq/enable-work-iq)
 
 #### 3-2. 고객 소유 Work IQ 연결 앱 등록
 
-1. **Entra ID** → **앱 등록** → **새 등록**에서 `fouriq-workiq-api`를 만듭니다. 계정 유형은 **이 조직 디렉터리의 계정만**을 선택합니다.
+1. [Microsoft Entra 관리 센터](https://entra.microsoft.com/)의 **Entra ID** → **앱 등록** → **새 등록**에서 `fouriq-workiq-api`를 만듭니다. 계정 유형은 **이 조직 디렉터리의 계정만**을 선택합니다.
 2. **개요**에서 애플리케이션(클라이언트) ID를 확인합니다. 다음 단계의 URI와 3-3의 자격 증명 등록에 사용합니다.
 3. **API 표시** (Expose an API)에서 Application ID URI를 `api://<연결-앱-ID>`로 설정합니다. **범위 추가**를 눌러 이름을 `access_as_user`, 동의 대상을 **관리자만**, 상태를 **사용**으로 설정합니다.
 4. **API 권한** → **권한 추가** → **조직에서 사용하는 API**에서 Work IQ API를 찾습니다. 3-1의 ID와 같은 앱인지 확인합니다.
@@ -89,7 +89,7 @@ az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 
 Search가 연결 앱을 사용할 수 있도록 권한을 연결하는 단계입니다.
 
-1. Azure Portal에서 **Azure AI Search** → **ID** (Identity)를 엽니다.
+1. [Azure Portal](https://portal.azure.com/)에서 **Azure AI Search** → **ID** (Identity)를 엽니다.
 2. **시스템 할당**을 켜고 Object (principal) ID를 기록합니다.
 3. 아래 내용으로 `credential.json`을 만듭니다. Search의 테넌트 ID와 방금 기록한 principal ID를 넣습니다.
 
@@ -117,7 +117,7 @@ az ad app federated-credential create --id "<고객-앱-클라이언트-GUID>" -
 az ad app federated-credential list --id "<고객-앱-클라이언트-GUID>" --query "[].{id:id,name:name,issuer:issuer,subject:subject,audiences:audiences}" --output json
 ```
 
-포털의 **연결 앱** → **인증서 및 비밀** → **페더레이션 자격 증명**에서 등록 결과를 확인할 수 있습니다.
+[Microsoft Entra 관리 센터](https://entra.microsoft.com/)의 **연결 앱** → **인증서 및 비밀** → **페더레이션 자격 증명**에서 등록 결과를 확인할 수 있습니다.
 
 <img src="img/workiq_federated_credential.png" alt="Search 관리 ID와 페더레이션 자격 증명 연결 설정" width="550"/>
 
@@ -125,7 +125,7 @@ az ad app federated-credential list --id "<고객-앱-클라이언트-GUID>" --q
 
 #### 3-4. 사용자 로그인용 클라이언트 앱 구성
 
-1. **앱 등록** → **새 등록**에서 `fouriq-workiq-client`를 만듭니다. 계정 유형은 **이 조직 디렉터리의 계정만**을 선택합니다.
+1. [Microsoft Entra 관리 센터](https://entra.microsoft.com/)의 **앱 등록** → **새 등록**에서 `fouriq-workiq-client`를 만듭니다. 계정 유형은 **이 조직 디렉터리의 계정만**을 선택합니다.
 2. **API 권한** → **권한 추가** → **조직에서 사용하는 API**에서 `fouriq-workiq-api`를 검색합니다.
 3. **위임된 권한**에서 `access_as_user`를 추가하고 **관리자 동의 부여**를 클릭합니다.
 4. **인증** → **플랫폼 추가** → **모바일 및 데스크톱 애플리케이션**에서 `http://localhost`를 등록합니다. 노트북에서 사용하는 `http://localhost:8400`도 이 설정으로 허용됩니다.
@@ -234,8 +234,8 @@ azd up
 
 `azd up`이 AI Search/Fabric 용량을 프로비저닝하는 약 20분 동안, **아래 설정을 미리 켜두어야** postprovision 단계에서 Fabric IQ Ontology 생성이 실패하지 않습니다.
 
-1. Azure Portal 에서 방금 생성된 **Fabric 용량** 리소스명을 기억합니다
-2. 새 인터넷 창을 열어 **Microsoft Fabric 관리 포털**  [https://app.fabric.microsoft.com/admin-portal/capacities](https://app.fabric.microsoft.com/admin-portal/capacities) 로 이동한 후 **패브릭 용량** 을 선택 해당 용량 이름을 직접 선택 합니다.
+1. [Azure Portal](https://portal.azure.com/)에서 방금 생성된 **Fabric 용량** 리소스명을 기억합니다.
+2. [Microsoft Fabric 관리 포털](https://app.fabric.microsoft.com/admin-portal/capacities)로 이동한 후 **패브릭 용량**에서 해당 용량 이름을 선택합니다.
 
 <img src="img/fabric_iq_ontology_enable_0.png" alt="Fabric IQ Ontology 미리 보기 기능 활성화" width="400"/>
 
@@ -283,7 +283,7 @@ python infra/recreate-fabric-ontology.py --verify-only
 
 Part 3 커널을 다시 시작하고 환경 변수 로드부터 실행하세요. `fabricOntology` 활동에 오류가 없어야 하고 Fabric 참조가 있어야 합니다. HR 문서 검색이나 답변 합성이 성공해도 Fabric 데이터 조회가 실패하면 실습 성공이 아닙니다. Part 5와 Part 6에도 같은 검증을 적용합니다. `--verify-only`는 저장된 바인딩을 확인하며 실제 데이터 조회나 사용자 권한 검증을 대신하지 않습니다.
 
-바인딩 검증이 통과했는데 `Something went wrong while loading the ontology definition` 오류가 계속되면 동일한 복구 명령을 반복하거나 리소스를 재생성하지 마세요. Fabric 포털에서 같은 Ontology를 열고 `Product` 엔터티와 데이터 연결을 확인한 뒤, Ontology 에이전트에서 재고 집계 질문을 직접 실행하세요. 엔터티 정의 조회와 자연어 데이터 조회는 서로 다른 검증입니다. 포털에서도 실패하면 Fabric 조회 단계의 원인을 추가로 조사해야 합니다. 포털에서는 성공하고 Search에서만 실패하면 사용자 토큰과 Search 연동을 확인합니다.
+바인딩 검증이 통과했는데 `Something went wrong while loading the ontology definition` 오류가 계속되면 동일한 복구 명령을 반복하거나 리소스를 재생성하지 마세요. [Microsoft Fabric 포털](https://app.fabric.microsoft.com/)에서 같은 Ontology를 열고 `Product` 엔터티와 데이터 연결을 확인한 뒤, Ontology 에이전트에서 재고 집계 질문을 직접 실행하세요. 엔터티 정의 조회와 자연어 데이터 조회는 서로 다른 검증입니다. 포털에서도 실패하면 Fabric 조회 단계의 원인을 추가로 조사해야 합니다. 포털에서는 성공하고 Search에서만 실패하면 사용자 토큰과 Search 연동을 확인합니다.
 
 </details>
 
