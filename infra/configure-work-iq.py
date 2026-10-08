@@ -27,6 +27,14 @@ def az_json(*args):
         encoding="utf-8", check=False,
     )
     if result.returncode:
+        if "Please run 'az login'" in result.stderr:
+            raise RuntimeError(
+                "Azure CLI is not signed in in this environment. "
+                "In the Codespaces terminal, run: az login --use-device-code "
+                "Then select the subscription containing Search and rerun the setup cell. "
+                "Browser and azd sign-ins do not sign in Azure CLI. "
+                f"Original error: {result.stderr.strip()}"
+            )
         raise RuntimeError(f"Azure CLI failed: {result.stderr.strip()}")
     return json.loads(result.stdout)
 

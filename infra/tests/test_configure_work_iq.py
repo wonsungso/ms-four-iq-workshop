@@ -82,6 +82,40 @@ class ConfigureWorkIQTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "identity"):
             self.discover()
 
+    def test_missing_cli_login_has_actionable_guidance(self):
+        self.cli.stop()
+        result = Mock(returncode=1, stderr="ERROR: Please run 'az login' to setup account.")
+        with patch.object(setup.shutil, "which", return_value="az"), \
+             patch.object(setup.subprocess, "run", return_value=result):
+            with self.assertRaisesRegex(RuntimeError, "az login --use-device-code"):
+                setup.az_json("account", "show")
+
+    def test_other_cli_errors_are_preserved(self):
+        self.cli.stop()
+        result = Mock(returncode=1, stderr="ERROR: AuthorizationFailed")
+        with patch.object(setup.shutil, "which", return_value="az"), \
+             patch.object(setup.subprocess, "run", return_value=result):
+            with self.assertRaisesRegex(RuntimeError, "Azure CLI failed: ERROR: AuthorizationFailed"):
+                setup.az_json("resource", "list")
+
+    def test_missing_cli_login_does_not_write_env(self):
+        self.cli.stop()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / ".env"
+            path.write_text("AZURE_SEARCH_SERVICE_ENDPOINT=https://test-search.search.windows.net\n")
+            original = path.read_bytes()
+            result = Mock(returncode=1, stderr="ERROR: Please run 'az login' to setup account.")
+            with patch.object(setup, "ROOT", root), \
+                 patch.object(setup.shutil, "which", return_value="az"), \
+                 patch.object(setup.subprocess, "run", return_value=result), \
+                 patch.object(setup, "Graph") as graph, \
+                 patch("sys.argv", ["configure-work-iq.py"]):
+                with self.assertRaisesRegex(RuntimeError, "az login --use-device-code"):
+                    setup.main()
+                graph.assert_not_called()
+            self.assertEqual(path.read_bytes(), original)
+
     def test_atomic_env_update_preserves_other_settings(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / ".env"
