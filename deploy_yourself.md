@@ -169,6 +169,38 @@ azd hooks run postprovision
 
 `azd hooks run postprovision`은 인프라를 다시 배포하지 않고 postprovision 스크립트(인덱스/Fabric Lakehouse/Ontology 설정)만 재실행하므로 `azd up`을 처음부터 다시 돌리는 것보다 훨씬 빠릅니다.
 
+`ConnectionResetError`나 타임아웃으로 생성 응답을 받지 못해도 Fabric에는 Ontology가 이미 만들어졌을 수 있습니다. 최신 생성 스크립트는 연결 오류가 발생하면 같은 이름의 항목이 실제로 저장됐는지 확인하고 발견된 항목을 재사용합니다. 항목을 찾지 못하면 오류를 그대로 보고합니다. 수동 복구할 때도 포털에서 실제 항목을 먼저 확인하고 해당 ID를 `.env`의 `FABRIC_ONTOLOGY_ID`에 넣어 기존 항목 복구를 실행하세요. 테넌트 기능 설정 오류로 단정하거나 무조건 새 Ontology를 만들지 마세요.
+
+#### (Troubleshooting) Ontology는 있지만 데이터 원본이 없다는 오류
+
+`This ontology has no data sources bound to it yet`는 Ontology 항목 생성과 데이터 바인딩 완료가 서로 다르다는 뜻입니다. 새 경험 Ontology는 [TMDL 정의](https://learn.microsoft.com/rest/api/fabric/articles/item-management/definitions/ontology-definition)를 사용합니다. 구형 JSON 정의를 전송한 뒤 HTTP 성공만 확인하면 빈 Ontology가 남을 수 있습니다.
+
+새 경험의 Lakehouse 연결에는 OneLake 연결식과 Fabric 원본 식별 메타데이터가 필요합니다. SQL 연결식과 속성 매핑만 저장하면 엔터티 목록은 보여도 실제 조회는 실패할 수 있습니다. 포털에서 `The kind of Fabric item this data source points to couldn't be identified`가 나타난다면 `ONT_WorkspaceId`, `ONT_ItemId`, `ONT_ItemKind`와 SQL 원본 메타데이터가 누락된 바인딩인지 확인하세요. 복구 스크립트는 포털의 Lakehouse 연결 형식으로 정의를 생성하고 이 메타데이터까지 검증합니다. 복구 중에는 포털의 편집 화면을 닫아 저장되지 않은 변경이 API 업데이트를 덮어쓰지 않도록 합니다.
+
+최신 코드를 받은 뒤 저장소 루트에서 다음을 실행하세요. `.env`의 `FABRIC_WORKSPACE_ID`와 `FABRIC_ONTOLOGY_ID`가 실패한 조회의 ID와 일치하는지 먼저 확인합니다.
+
+```bash
+python infra/recreate-fabric-ontology.py --verify-only
+python infra/recreate-fabric-ontology.py --repair-existing
+python infra/recreate-fabric-ontology.py --verify-only
+```
+
+첫 번째 검증이 실패하면 두 번째 명령으로 복구합니다. 복구는 **기존 워크스페이스, Lakehouse, 테이블, Ontology ID를 재사용**하며 인프라를 재배포하거나 테이블을 다시 적재하지 않습니다. Ontology 정의는 워크샵의 4개 엔터티와 바인딩으로 교체하므로 사용자 정의 엔터티를 추가했다면 먼저 정의를 백업하세요. 저장된 정의에서 Lakehouse 연결과 엔터티 속성 매핑을 읽어 확인한 뒤 Search 지식 소스를 동일한 ID로 다시 연결합니다.
+
+Part 3 커널을 다시 시작하고 환경 변수 로드부터 실행하세요. `fabricOntology` 활동에 오류가 없어야 하고 Fabric 참조가 있어야 합니다. HR 문서 검색이나 답변 합성이 성공해도 Fabric 데이터 조회가 실패하면 실습 성공이 아닙니다. Part 5와 Part 6에도 같은 검증을 적용합니다. `--verify-only`는 저장된 바인딩을 확인하며 실제 데이터 조회나 사용자 권한 검증을 대신하지 않습니다.
+
+바인딩 검증이 통과했는데 `Something went wrong while loading the ontology definition` 오류가 계속되면 동일한 복구 명령을 반복하거나 리소스를 재생성하지 마세요. Fabric 포털에서 같은 Ontology를 열고 `Product` 엔터티와 데이터 연결을 확인한 뒤, Ontology 에이전트에서 재고 집계 질문을 직접 실행하세요. 엔터티 정의 조회와 자연어 데이터 조회는 서로 다른 검증입니다. 포털에서도 실패하면 Fabric 조회 단계의 원인을 추가로 조사해야 합니다. 포털에서는 성공하고 Search에서만 실패하면 사용자 토큰과 Search 연동을 확인합니다.
+
+#### (Troubleshooting) Web IQ 또는 Work IQ만 실패하는 경우
+
+Azure 리소스가 정상 생성돼도 외부 지식 소스의 인증과 사용자 권한이 자동으로 준비되는 것은 아닙니다.
+
+- Web IQ에서 `401 Unauthorized`와 `auth_invalid_api_key`가 나타나면 `.env`의 `WEB_IQ_KEY`를 유효한 키로 교체한 뒤 커널을 다시 시작하고 Web IQ 지식 소스 생성 셀부터 재실행하세요. 저장된 인증 헤더도 갱신해야 합니다. 뒤이어 나타나는 SSE `415 UnsupportedMediaType`는 대체 전송 시도의 오류이므로 먼저 키 인증 실패를 해결합니다.
+- Work IQ에서 `AI credits access is not configured for this user`가 나타나면 Microsoft 365 관리자에게 **노트북에 로그인한 사용자**의 AI credits 사용 권한을 요청하세요. Azure 구독 로그인이나 Search 역할만으로 이 권한이 생기지는 않습니다.
+- Part 4의 예제 메일 생성은 별도의 Microsoft Graph `Mail.Send` 동의가 필요합니다. 메일 전송을 건너뛰었다면 실제 받은 편지함에서 검색할 수 있는 자료를 사용하고 예제 메일 생성까지 검증했다고 판단하지 마세요.
+
+Part 2, Part 4, Part 5, Part 6은 소스 활동에 오류가 있거나 필요한 Web IQ/Work IQ 참조가 없으면 답변 표시 전에 실패를 보고합니다. 내부 문서나 Fabric 답변만 반환됐다고 전체 실습 성공으로 판단하지 않습니다. 워크샵 데이터의 재고 집계 검증 기준은 `HAND TOOLS`, 총 `stockLevel` **1,635**입니다.
+
 ### 3. 워크샵 시작
 
 <img src="img/provision_completed.png" alt="Provision 완료" width="400"/>

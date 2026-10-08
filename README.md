@@ -45,6 +45,8 @@ flowchart LR
 
 [./deploy_yourself.md](./deploy_yourself.md) 가이드의 단계를 따르세요.
 
+기존 리소스에서 Fabric IQ가 데이터 원본 바인딩 오류를 반환하면 [기존 Ontology 바인딩 검증 및 복구](./deploy_yourself.md#troubleshooting-ontology는-있지만-데이터-원본이-없다는-오류)를 실행하세요. 리소스를 재생성할 필요 없이 기존 Ontology ID를 유지한 채 복구할 수 있습니다.
+
 ### 🧠 학습 성과
 
 이 워크샵을 마치면 다음을 할 수 있게 됩니다.

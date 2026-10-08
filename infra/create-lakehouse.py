@@ -698,18 +698,10 @@ def make_relationship_parts(
     ]
 
 
-def build_zava_ontology_definition(workspace_id: str, lakehouse_id: str) -> dict:
-    """Build a Fabric IQ ontology definition for the Zava DIY lakehouse tables."""
-    parts = [
-        create_definition_part(
-            ".platform",
-            {"metadata": {"type": "Ontology", "displayName": FABRIC_ONTOLOGY_NAME}},
-        ),
-        create_definition_part("definition.json", {}),
-    ]
-
+def zava_entity_specs() -> list[tuple]:
+    """Return the shared entity schema for JSON and TMDL ontology definitions."""
     # Ontology property names must be identifier-safe; source maps to lakehouse column names.
-    entity_specs = [
+    return [
         (
             1001,
             "Product",
@@ -793,7 +785,17 @@ def build_zava_ontology_definition(workspace_id: str, lakehouse_id: str) -> dict
         ),
     ]
 
-    for spec in entity_specs:
+
+def build_zava_ontology_definition(workspace_id: str, lakehouse_id: str) -> dict:
+    """Build the legacy JSON ontology definition for existing old-experience items."""
+    parts = [
+        create_definition_part(
+            ".platform",
+            {"metadata": {"type": "Ontology", "displayName": FABRIC_ONTOLOGY_NAME}},
+        ),
+        create_definition_part("definition.json", {}),
+    ]
+    for spec in zava_entity_specs():
         parts.extend(make_entity_parts(*spec, workspace_id, lakehouse_id))
 
     # Relationship (edge): each Product belongs to a Category. The "products" table
@@ -820,6 +822,181 @@ def build_zava_ontology_definition(workspace_id: str, lakehouse_id: str) -> dict
         )
 
     return {"definition": {"parts": parts}}
+
+
+def create_tmdl_part(path: str, text: str) -> dict:
+    return {
+        "path": path,
+        "payload": base64.b64encode(text.encode("utf-8")).decode("ascii"),
+        "payloadType": "InlineBase64",
+    }
+
+
+def build_zava_tmdl_definition(
+    workspace_id: str, lakehouse_properties: dict, platform_part: dict
+) -> dict:
+    """Bind the same workshop entities through DirectLake in new-experience items."""
+    endpoint = lakehouse_properties["properties"]["sqlEndpointProperties"]
+    if endpoint.get("provisioningStatus") != "Success":
+        raise RuntimeError("Lakehouse SQL analytics endpoint is not ready.")
+    server = endpoint["connectionString"]
+    lakehouse_id = lakehouse_properties["id"]
+    lakehouse_name = lakehouse_properties["displayName"]
+    source_url = f"{ONELAKE_DFS_URL}/{workspace_id}/{lakehouse_id}"
+    parts = [
+        platform_part,
+        create_tmdl_part("database.tmdl", "database\n\tcompatibilityLevel: 1000000\n"),
+        create_tmdl_part("namespaces/default.tmdl", "namespace default\n"),
+        create_tmdl_part(
+            "expressions.tmdl",
+            "expression DatabaseQuery =\n"
+            "\t\tlet\n"
+            f"\t\t\tSource = AzureStorage.DataLake({json.dumps(source_url)}, "
+            "[HierarchicalNavigation=true])\n"
+            "\t\tin\n\t\t\tSource\n",
+        ),
+    ]
+    model = ["model Model", "", "ref namespace default"]
+    types = {"String": "string", "Double": "double", "BigInt": "int64"}
+    for _, entity, table, columns, key, _ in zava_entity_specs():
+        table_lines = [f"table {table}"]
+        entity_lines = [
+            f"entity {entity}",
+            f"\tbackingTable: {table}",
+            f"\tkeyProperty: {key}",
+        ]
+        for column in columns:
+            name, source = column["name"], column["source"]
+            data_type = types[column["type"]]
+            table_lines.extend([
+                "", f"\tcolumn {source}", f"\t\tdataType: {data_type}",
+                f"\t\tsourceColumn: {source}",
+            ])
+            entity_lines.extend([
+                "", f"\tproperty {name}", f"\t\tdataType: {data_type}",
+                "", "\t\tbackingConfiguration", f"\t\t\tvalueColumn: {table}.{source}",
+            ])
+        table_lines.extend([
+            "", f"\tpartition {table} = entity", "\t\tmode: directLake",
+            "\t\tsource", f"\t\t\tentityName: {table}",
+            "\t\t\texpressionSource: DatabaseQuery",
+            "", f"\t\tannotation ONT_WorkspaceId = {workspace_id}",
+            "", f"\t\tannotation ONT_ItemId = {lakehouse_id}",
+            "", "\t\tannotation ONT_ItemKind = Lakehouse",
+            "", f"\t\tannotation ONT_ItemName = {lakehouse_name}",
+            "", f"\t\tannotation ONT_SqlEndpoint = {server}",
+            "", f"\t\tannotation ONT_SqlDatabase = {lakehouse_name}",
+        ])
+        parts.extend([
+            create_tmdl_part(f"tables/{table}.tmdl", "\n".join(table_lines) + "\n"),
+            create_tmdl_part(f"entities/{entity}.tmdl", "\n".join(entity_lines) + "\n"),
+        ])
+        model.extend([f"ref table {table}", f"ref entity {entity}"])
+    if INCLUDE_CATEGORY_RELATIONSHIP:
+        parts.extend([
+            create_tmdl_part(
+                "relationships.tmdl",
+                "relationship product_category\n"
+                "\tfromColumn: products.category\n\ttoColumn: categories.category_name\n",
+            ),
+            create_tmdl_part(
+                "entityRelationships.tmdl",
+                "entityRelationship belongsToCategory\n"
+                "\tfromEntity: Product\n\ttoEntity: Category\n"
+                "\n\tbackingConfiguration\n\t\trelationship: product_category\n",
+            ),
+        ])
+    parts.append(create_tmdl_part("model.tmdl", "\n".join(model) + "\n"))
+    return {"definition": {"parts": parts}}
+
+
+def get_ontology_definition(workspace_id: str, ontology_id: str) -> dict:
+    """Read the persisted definition, including asynchronous getDefinition results."""
+    url = f"{FABRIC_API_BASE}/workspaces/{workspace_id}/ontologies/{ontology_id}/getDefinition"
+    response = fabric_post(url, {})
+    response.raise_for_status()
+    if response.status_code == 202:
+        operation_url = response.headers.get("Location", "")
+        if not operation_url or not poll_fabric_operation(operation_url):
+            raise RuntimeError("Ontology getDefinition operation did not complete.")
+        response = fabric_get(operation_url.rstrip("/") + "/result")
+        response.raise_for_status()
+    return response.json()["definition"]
+
+
+def is_tmdl_definition(definition: dict) -> bool:
+    return any(part["path"] == "database.tmdl" for part in definition["parts"])
+
+
+def verify_ontology_bindings(
+    workspace_id: str, ontology_id: str, lakehouse_id: str
+) -> bool:
+    """Fail if a successful API update did not persist the expected data bindings."""
+    definition = get_ontology_definition(workspace_id, ontology_id)
+    saved = {
+        part["path"]: base64.b64decode(part["payload"]).decode("utf-8")
+        for part in definition["parts"]
+    }
+    if is_tmdl_definition(definition):
+        properties = get_lakehouse_properties(workspace_id, lakehouse_id)
+        endpoint = properties["properties"]["sqlEndpointProperties"]
+        expression = saved.get("expressions.tmdl", "")
+        source = (
+            f"Source = AzureStorage.DataLake("
+            f"{json.dumps(f'{ONELAKE_DFS_URL}/{workspace_id}/{lakehouse_id}')}, "
+            "[HierarchicalNavigation=true])"
+        )
+        if source not in {line.strip() for line in expression.splitlines()}:
+            raise RuntimeError("Ontology has no binding to the expected OneLake source.")
+        for _, entity, table, columns, key, _ in zava_entity_specs():
+            entity_lines = {
+                line.strip() for line in saved.get(f"entities/{entity}.tmdl", "").splitlines()
+            }
+            table_lines = {
+                line.strip() for line in saved.get(f"tables/{table}.tmdl", "").splitlines()
+            }
+            expected_entity = [f"entity {entity}", f"backingTable: {table}", f"keyProperty: {key}"]
+            expected_entity.extend(f"property {column['name']}" for column in columns)
+            expected_entity.extend(f"valueColumn: {table}.{column['source']}" for column in columns)
+            expected_table = [
+                f"table {table}", "mode: directLake", f"entityName: {table}",
+                "expressionSource: DatabaseQuery",
+                f"annotation ONT_WorkspaceId = {workspace_id}",
+                f"annotation ONT_ItemId = {lakehouse_id}",
+                "annotation ONT_ItemKind = Lakehouse",
+                f"annotation ONT_ItemName = {properties['displayName']}",
+                f"annotation ONT_SqlEndpoint = {endpoint['connectionString']}",
+                f"annotation ONT_SqlDatabase = {properties['displayName']}",
+            ]
+            expected_table.extend(f"column {column['source']}" for column in columns)
+            expected_table.extend(f"sourceColumn: {column['source']}" for column in columns)
+            if not all(value in entity_lines for value in expected_entity) or not all(
+                value in table_lines for value in expected_table
+            ):
+                raise RuntimeError(f"Ontology data binding was not persisted for {entity}.")
+    else:
+        bindings = [
+            json.loads(text)["dataBindingConfiguration"]
+            for path, text in saved.items() if "/DataBindings/" in path
+        ]
+        for entity_id, entity, table, columns, _, _ in zava_entity_specs():
+            expected_properties = {
+                (column["source"], str(entity_id * 100 + offset))
+                for offset, column in enumerate(columns, start=1)
+            }
+            if not any(
+                binding["sourceTableProperties"].get("workspaceId") == workspace_id
+                and binding["sourceTableProperties"].get("itemId") == lakehouse_id
+                and binding["sourceTableProperties"].get("sourceTableName") == table
+                and expected_properties <= {
+                    (prop["sourceColumnName"], prop["targetPropertyId"])
+                    for prop in binding.get("propertyBindings", [])
+                }
+                for binding in bindings
+            ):
+                raise RuntimeError(f"Ontology data binding was not persisted for {entity}.")
+    log_message("Verified persisted data bindings for Product, Category, Store and YearWeight.")
+    return True
 
 
 def get_existing_ontology(workspace_id: str, name: str) -> dict | None:
@@ -850,7 +1027,18 @@ def create_or_get_ontology(workspace_id: str, name: str) -> dict:
         "description": "Ontology for the Zava DIY lakehouse data.",
     }
     log_message(f"Creating ontology '{name}'...")
-    resp = fabric_post(url, payload)
+    try:
+        resp = fabric_post(url, payload)
+    except (requests.ConnectionError, requests.Timeout):
+        log_message(
+            "Ontology creation response was lost. Checking for the persisted item "
+            "before considering another create request."
+        )
+        existing = get_existing_ontology(workspace_id, name)
+        if existing:
+            log_message(f"Recovered created ontology after transport failure: {existing['id']}")
+            return existing
+        raise
     if resp.status_code not in (200, 201, 202):
         raise RuntimeError(f"Failed to create ontology: {resp.status_code} - {resp.text}")
 
@@ -877,7 +1065,15 @@ def update_ontology_definition(
         f"{FABRIC_API_BASE}/workspaces/{workspace_id}"
         f"/ontologies/{ontology_id}/updateDefinition"
     )
-    payload = build_zava_ontology_definition(workspace_id, lakehouse_id)
+    current = get_ontology_definition(workspace_id, ontology_id)
+    if is_tmdl_definition(current):
+        platform = next(part for part in current["parts"] if part["path"] == ".platform")
+        payload = build_zava_tmdl_definition(
+            workspace_id, get_lakehouse_properties(workspace_id, lakehouse_id), platform
+        )
+        log_message("Using new-experience TMDL ontology definition.")
+    else:
+        payload = build_zava_ontology_definition(workspace_id, lakehouse_id)
     log_message("Updating ontology definition with Zava DIY entity bindings...")
     resp = fabric_post(url, payload)
     if resp.status_code not in (200, 202):
@@ -888,9 +1084,11 @@ def update_ontology_definition(
         return False
 
     operation_url = resp.headers.get("Location", "")
-    if operation_url:
-        return poll_fabric_operation(operation_url)
-    return True
+    if resp.status_code == 202 and not operation_url:
+        raise RuntimeError("Ontology update returned 202 without an operation Location.")
+    if operation_url and not poll_fabric_operation(operation_url):
+        return False
+    return verify_ontology_bindings(workspace_id, ontology_id, lakehouse_id)
 
 
 def find_graph_model_item(workspace_id: str, ontology_id: str) -> dict | None:
@@ -932,6 +1130,10 @@ def wait_for_graph_model_ready(
     tables yet. This is a timing race, not a schema problem: re-pushing the definition after
     a short wait re-triggers the refresh and it succeeds once the sync catches up.
     """
+    if is_tmdl_definition(get_ontology_definition(workspace_id, ontology_id)):
+        # New-experience items query DirectLake and do not create the legacy GraphModel.
+        return verify_ontology_bindings(workspace_id, ontology_id, lakehouse_id)
+
     graph_item = find_graph_model_item(workspace_id, ontology_id)
     if not graph_item:
         log_message("WARNING: Could not locate the ontology's GraphModel item to verify readiness.")
@@ -980,7 +1182,8 @@ def wait_for_graph_model_ready(
 
         log_message(f"Likely a lakehouse sync race condition. Waiting {retry_wait}s and retrying...")
         time.sleep(retry_wait)
-        update_ontology_definition(workspace_id, ontology_id, lakehouse_id)
+        if not update_ontology_definition(workspace_id, ontology_id, lakehouse_id):
+            return False
 
     return False
 
@@ -1111,8 +1314,9 @@ def main():
                         workspace_id, ontology["id"], lakehouse_id
                     )
                     if not graph_ready:
+                        ontology_success = False
                         log_message(
-                            "  WARNING: GraphModel did not confirm ready after retries. "
+                            "  ERROR: GraphModel did not confirm ready after retries. "
                             "Fabric IQ queries may fail until it finishes building; re-run "
                             "this script later or retry the Part 3/5 notebook cell."
                         )
@@ -1132,7 +1336,7 @@ def main():
 
         log_message("=" * 60)
 
-        if ontology:
+        if ontology and ontology_success:
             log_message(f"Ontology: {FABRIC_ONTOLOGY_NAME} ({ontology['id']})")
             update_root_env({"FABRIC_ONTOLOGY_ID": ontology["id"]})
             log_message("Updated repo root .env with FABRIC_ONTOLOGY_ID")
@@ -1142,11 +1346,11 @@ def main():
             return True
         elif table_success:
             log_message(
-                "\nWARNING: Lakehouse and tables were created successfully, but ontology "
-                "setup failed or was unavailable. Continuing (this is not treated as a "
-                "fatal error)."
+                "\nERROR: Lakehouse and tables were created successfully, but ontology "
+                "setup failed or was unavailable. Repair the existing ontology before "
+                "running the Fabric notebooks."
             )
-            return True
+            return False
         else:
             log_message("\nWARNING: Some tables or ontology setup failed.")
             return False
