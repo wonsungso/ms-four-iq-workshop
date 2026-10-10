@@ -27,7 +27,7 @@ Zava(DIY 용품 소매업체) 신입 직원이 되어, Azure AI Search 에이전
 - **Foundry IQ**: 업로드된 파일이나 미리 구축된 검색 인덱스를 질의하는 기본 지식 소스(문서/정책 등 비정형 콘텐츠)
 - **Web IQ**: MCP 서버를 통해 실시간 웹 검색 결과와 인용을 가져오는 지식 소스
 
-이 워크샵은 **같은 Azure AI Search 서비스**에서 Part별 지식 베이스를 만들며 소스 구성을 확장하는 과정입니다. Part 2~4는 두 문서 소스에 각각 Web IQ, Fabric IQ, Work IQ를 추가하고, Part 5/6에서 이들을 통합합니다. Azure AI Search의 에이전트형 검색이 여러 소스를 오케스트레이션하고 인용 기반 답변을 합성합니다. Part 5는 Fabric 질문과 나머지 질문을 별도로 조회합니다. Part 6는 다섯 소스를 모두 확인하도록 Fabric, Work IQ, 문서, Web IQ를 네 번의 요청으로 나누고 답변을 함께 표시합니다.
+이 워크샵은 **같은 Azure AI Search 서비스**에서 Part별 지식 베이스를 만들며 소스 구성을 확장하는 과정입니다. Part 2~4는 두 문서 소스에 각각 Web IQ, Fabric IQ, Work IQ를 추가하고, Part 5/6에서 이들을 통합합니다. Azure AI Search의 에이전트형 검색이 여러 소스를 오케스트레이션하고 인용 기반 답변을 합성합니다. 
 
 ```mermaid
 flowchart LR
