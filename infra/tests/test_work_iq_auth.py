@@ -256,19 +256,29 @@ class NotebookWorkIQTests(unittest.TestCase):
                 )
                 context["work_iq_credential"].get_assertion.return_value = "work-token"
                 context["fabric_user_credential"].get_token.return_value.token = "fabric-token"
-                def result(kind):
+                def result(kind, names):
                     return SimpleNamespace(
-                        activity=[SimpleNamespace(type=kind, error=None, as_dict=lambda: {"type": kind})],
-                        references=[SimpleNamespace(type=t) for t in ([kind] if kind == "fabricOntology" else ["workIQ", "mcpServer"])],
+                        activity=[SimpleNamespace(
+                            type=kind, error=None,
+                            as_dict=lambda i=i, name=name: {
+                                "type": kind, "id": i, "knowledgeSourceName": name,
+                            },
+                        ) for i, name in enumerate(names)],
+                        references=[SimpleNamespace(type=kind, activity_source=i) for i in range(len(names))],
                         response=[SimpleNamespace(content=[SimpleNamespace(text="answer")])],
                     )
                 factory.return_value.retrieve.side_effect = (
-                    [result("fabricOntology"), result("workIQ")] if part == 6 else [result("workIQ")]
+                    [
+                        result("fabricOntology", [context["FABRIC_KNOWLEDGE_SOURCE_NAME"]]),
+                        result("workIQ", [context["WORK_KNOWLEDGE_SOURCE_NAME"]]),
+                        result("searchIndex", [context["HR_KNOWLEDGE_SOURCE_NAME"], context["HEALTH_KNOWLEDGE_SOURCE_NAME"]]),
+                        result("mcpServer", [context["WEB_KNOWLEDGE_SOURCE_NAME"]]),
+                    ] if part == 6 else [result("workIQ", [context["WORK_KNOWLEDGE_SOURCE_NAME"]])]
                 )
                 exec(self.source(part, retrieval_id), context)
                 self.assertEqual(factory.call_args.kwargs["api_version"], "2026-08-01-preview")
                 calls = factory.return_value.retrieve.call_args_list
-                work_call = calls[-1]
+                work_call = calls[1] if part == 6 else calls[0]
                 self.assertEqual(work_call.kwargs["query_work_iq_source_authorization"], "work-token")
                 self.assertNotIn("query_source_authorization", work_call.kwargs)
                 work_wire = work_call.kwargs["retrieval_request"].as_dict()
@@ -278,6 +288,7 @@ class NotebookWorkIQTests(unittest.TestCase):
                     for param in call.kwargs["retrieval_request"].as_dict()["knowledgeSourceParams"]:
                         self.assertIn(param["kind"], {"searchIndex", "workIQ", "fabricOntology", "mcpServer"})
                 if part == 6:
+                    self.assertEqual(len(calls), 4)
                     self.assertEqual(calls[0].kwargs["query_source_authorization"], "fabric-token")
                     self.assertNotIn("query_work_iq_source_authorization", calls[0].kwargs)
                     fabric_params = calls[0].kwargs["retrieval_request"].as_dict()["knowledgeSourceParams"]
@@ -286,6 +297,72 @@ class NotebookWorkIQTests(unittest.TestCase):
                             self.assertTrue(param["neverQuerySource"])
                     params = work_wire["knowledgeSourceParams"]
                     self.assertTrue(next(p for p in params if p["knowledgeSourceName"] == "fabric-ontology-knowledge-source")["neverQuerySource"])
+                    expected = [
+                        {context["FABRIC_KNOWLEDGE_SOURCE_NAME"]},
+                        {context["WORK_KNOWLEDGE_SOURCE_NAME"]},
+                        {context["HR_KNOWLEDGE_SOURCE_NAME"], context["HEALTH_KNOWLEDGE_SOURCE_NAME"]},
+                        {context["WEB_KNOWLEDGE_SOURCE_NAME"]},
+                    ]
+                    for call, names in zip(calls, expected):
+                        wire = call.kwargs["retrieval_request"].as_dict()
+                        enabled = {p["knowledgeSourceName"] for p in wire["knowledgeSourceParams"]
+                                   if not p.get("neverQuerySource")}
+                        self.assertEqual(enabled, names)
+                        for param in wire["knowledgeSourceParams"]:
+                            if param["knowledgeSourceName"] in names and param["kind"] != "mcpServer":
+                                self.assertTrue(param["alwaysQuerySource"])
+                        if call is not work_call:
+                            self.assertNotIn("query_work_iq_source_authorization", call.kwargs)
+                    self.assertNotIn("벤치마크", work_wire["intents"][0]["search"])
+                    self.assertNotIn("예산", work_wire["intents"][0]["search"])
+                    self.assertEqual(len(context["result"].references), 5)
+
+    def test_part6_rejects_source_errors_missing_references_and_wrong_source(self):
+        names = {
+            "HR_KNOWLEDGE_SOURCE_NAME": "hr",
+            "HEALTH_KNOWLEDGE_SOURCE_NAME": "health",
+            "WORK_KNOWLEDGE_SOURCE_NAME": "work",
+            "FABRIC_KNOWLEDGE_SOURCE_NAME": "fabric",
+            "WEB_KNOWLEDGE_SOURCE_NAME": "web",
+        }
+
+        def response(kind, sources, references=True, error=None):
+            return SimpleNamespace(
+                activity=[SimpleNamespace(
+                    type=kind, error=error,
+                    as_dict=lambda i=i, name=name: {
+                        "type": kind, "id": i, "knowledgeSourceName": name, "error": error,
+                    },
+                ) for i, name in enumerate(sources)],
+                references=[SimpleNamespace(type=kind, activity_source=i)
+                            for i in range(len(sources))] if references else [],
+                response=[SimpleNamespace(content=[SimpleNamespace(text="answer")])],
+            )
+
+        for case in ("work-only", "missing-web-reference", "wrong-web-source", "web-error", "missing-health"):
+            with self.subTest(case=case), \
+                 patch("azure.search.documents.knowledgebases.KnowledgeBaseRetrievalClient") as factory, \
+                 patch("IPython.display.display") as display, patch("builtins.print") as output:
+                results = [
+                    response("fabricOntology", ["fabric"]),
+                    response("workIQ", ["work"]),
+                    response("searchIndex", ["hr"] if case == "missing-health" else ["hr", "health"]),
+                    response(
+                        "mcpServer", ["work"] if case == "wrong-web-source" else ["web"],
+                        references=case != "missing-web-reference",
+                        error={"code": "Unauthorized"} if case == "web-error" else None,
+                    ),
+                ]
+                if case == "work-only":
+                    results[2] = response("workIQ", ["work"])
+                factory.return_value.retrieve.side_effect = results
+                context = self.context()
+                context.update(names, json=json, KNOWLEDGE_BASE_NAME="test-kb",
+                               work_iq_credential=Mock(), fabric_user_credential=Mock())
+                with self.assertRaisesRegex(RuntimeError, "조회 검증 실패"):
+                    exec(self.source(6, "115e8899"), context)
+                display.assert_not_called()
+                self.assertTrue(output.called)
 
     def test_notebooks_parse_and_have_no_saved_outputs(self):
         for path in (ROOT / "notebooks").glob("part*.ipynb"):
