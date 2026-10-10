@@ -380,6 +380,65 @@ class NotebookWorkIQTests(unittest.TestCase):
         old_lookup = {getattr(ref, "knowledge_source_name", None) for ref in response.references}
         self.assertEqual(old_lookup, {None})
 
+    def test_part5_uses_single_request_and_server_synthesis(self):
+        with patch("azure.search.documents.indexes.SearchIndexClient") as index_factory, \
+             patch("azure.search.documents.knowledgebases.KnowledgeBaseRetrievalClient") as factory, \
+             patch("IPython.display.display") as display, patch("builtins.print"):
+            context = self.context()
+            exec(self.source(5, "a03e1755"), context)
+            self.assertEqual(index_factory.call_args.kwargs["api_version"], context["AZURE_SEARCH_API_VERSION"])
+            wire = self.part6_response().as_dict()
+            wire["activity"] = [a for a in wire["activity"] if a["type"] != "workIQ"]
+            wire["references"] = [r for r in wire["references"] if r["type"] != "workIQ"]
+            response = KnowledgeBaseRetrievalResponse(wire)
+            factory.return_value.retrieve.return_value = response
+            context.update(KNOWLEDGE_BASE_NAME="test-kb", user_token="fabric-token", json=json)
+            exec(self.source(5, "c638792b"), context)
+            factory.return_value.retrieve.assert_called_once()
+            call = factory.return_value.retrieve.call_args
+            self.assertEqual(call.kwargs["query_source_authorization"], "fabric-token")
+            self.assertNotIn("query_work_iq_source_authorization", call.kwargs)
+            request = call.kwargs["retrieval_request"].as_dict()
+            self.assertNotIn("intents", request)
+            self.assertEqual(request["messages"][0]["content"][0]["text"], context["question"])
+            params = request["knowledgeSourceParams"]
+            self.assertEqual({p["knowledgeSourceName"] for p in params}, set(context["KNOWLEDGE_SOURCE_NAMES"]))
+            for param in params:
+                self.assertTrue(param["includeReferences"])
+                self.assertFalse(param.get("alwaysQuerySource", False))
+                self.assertFalse(param.get("neverQuerySource", False))
+            self.assertIs(context["result"], response)
+            self.assertEqual(context["answer_text"], "server-synthesized answer")
+            display.assert_called_once()
+            self.assertEqual(factory.call_args.kwargs["api_version"], context["AZURE_SEARCH_API_VERSION"])
+
+    def test_part5_rejects_incomplete_or_failed_retrieval(self):
+        for case in ("missing-fabric", "missing-web-reference", "source-error", "empty-answer"):
+            with self.subTest(case=case), \
+                 patch("azure.search.documents.knowledgebases.KnowledgeBaseRetrievalClient") as factory, \
+                 patch("IPython.display.display") as display, patch("builtins.print") as output:
+                wire = self.part6_response().as_dict()
+                wire["activity"] = [a for a in wire["activity"] if a["type"] != "workIQ"]
+                wire["references"] = [r for r in wire["references"] if r["type"] != "workIQ"]
+                if case == "missing-fabric":
+                    wire["activity"] = [a for a in wire["activity"] if a["type"] != "fabricOntology"]
+                elif case == "missing-web-reference":
+                    wire["references"] = [r for r in wire["references"] if r["type"] != "mcpServer"]
+                elif case == "source-error":
+                    wire["activity"][-1]["error"] = {"code": "Unauthorized", "message": "web error"}
+                else:
+                    wire["response"] = []
+                factory.return_value.retrieve.return_value = KnowledgeBaseRetrievalResponse(wire)
+                context = self.context()
+                context.update(KNOWLEDGE_BASE_NAME="test-kb", user_token="fabric-token", json=json)
+                for key, name in (("HR", "hrdocs"), ("HEALTH", "healthdocs"), ("FABRIC", "fabric-ontology"), ("WEB", "web")):
+                    context[f"{key}_KNOWLEDGE_SOURCE_NAME"] = f"{name}-knowledge-source"
+                with self.assertRaisesRegex(RuntimeError, "통합 조회 검증 실패"):
+                    exec(self.source(5, "c638792b"), context)
+                factory.return_value.retrieve.assert_called_once()
+                display.assert_not_called()
+                self.assertTrue(output.called)
+
     def test_part6_planner_instructions_cover_each_source(self):
         instructions = next(
             keyword.value for node in ast.walk(ast.parse(self.source(6, "9a3991dd")))
