@@ -24,7 +24,7 @@
 - 세션 참가자에게 명확하고 실행 가능한 콘텐츠 제공
 - 원격/자가 학습자를 위한 자기 주도 학습 지원
 - 루트 [README](README.md)의 학습 경로와 [labs](labs)의 B형 진입 문서 구조 준수
-- Part 1~6 실습 본문은 각 [labs](labs) 디렉터리의 노트북에 둡니다. 공통 인증 모듈·패키지 목록·복원 도구는 [notebooks](notebooks)에 유지하고 데이터 경로를 보존합니다.
+- Part 1~6 실습 본문은 각 [labs](labs) 디렉터리의 노트북에 둡니다. 공통 인증 모듈·패키지 목록·복원 도구는 [workshop-support](workshop-support)에 유지하고 데이터 경로를 보존합니다.
 
 #### 허가 없이 수정하면 안 되는 항목
 - 라이선스 파일(`LICENSE`, `LICENSE-DOCS`, `CODE_OF_CONDUCT.md`)
@@ -58,7 +58,7 @@
 
 루트 README에는 전체 frontmatter를, 랩 README에는 `title`, `duration_minutes`, `last_updated`를 둡니다. 소요 시간의 근거가 없으면 null과 TODO 주석을 남깁니다. 본문에 미확정 상태를 반복해서 설명하지 않습니다.
 
-이 규칙은 [labs](labs)와 [notebooks](notebooks)의 모든 `.ipynb` 파일에 적용됩니다. 각 Part의 첫 코드 셀에서 저장소 루트와 공통 모듈 경로를 설정하고, `.env`와 실습 데이터는 저장소 루트 기준으로 읽습니다. 노트북을 이동하면 이미지·다음 단계·공통 모듈·테스트의 참조를 함께 검증합니다.
+이 규칙은 [labs](labs)와 [workshop-support](workshop-support)의 모든 `.ipynb` 파일에 적용됩니다. 각 Part의 첫 코드 셀에서 저장소 루트와 공통 모듈 경로를 설정하고, `.env`와 실습 데이터는 저장소 루트 기준으로 읽습니다. 노트북을 이동하면 이미지·다음 단계·공통 모듈·테스트의 참조를 함께 검증합니다.
 
 ### 작성 스타일
 - 산문 설명에서 세미콜론을 사용하지 마세요. 대신 문장을 다시 작성하세요.

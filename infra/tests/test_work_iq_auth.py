@@ -25,7 +25,7 @@ NOTEBOOK_PATHS = {
     5: ROOT / "labs" / "05-combined-iq" / "part5-except-workiq-kb.ipynb",
     6: ROOT / "labs" / "06-all-iq" / "part6-work-iq-fabric-iq-to-kb.ipynb",
 }
-spec = importlib.util.spec_from_file_location("work_iq_auth", ROOT / "notebooks" / "work_iq_auth.py")
+spec = importlib.util.spec_from_file_location("work_iq_auth", ROOT / "workshop-support" / "work_iq_auth.py")
 auth = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(auth)
 APP_ID = "11111111-1111-1111-1111-111111111111"
@@ -474,19 +474,19 @@ class NotebookWorkIQTests(unittest.TestCase):
     def test_notebook_paths_resolve_from_root_shared_and_each_lab_folder(self):
         for part, path in NOTEBOOK_PATHS.items():
             source = self.source(part, f"lab{part:02d}-paths")
-            for directory in (ROOT, ROOT / "notebooks", ROOT / "labs", path.parent):
+            for directory in (ROOT, ROOT / "workshop-support", ROOT / "labs", path.parent):
                 with self.subTest(part=part, cwd=directory), \
                      patch("pathlib.Path.cwd", return_value=directory), \
                      patch.object(sys, "path", []):
                     context = {}
                     exec(source, context)
                     self.assertEqual(context["repository_root"], ROOT)
-                    self.assertEqual(sys.path, [str(ROOT / "notebooks")])
+                    self.assertEqual(sys.path, [str(ROOT / "workshop-support")])
                     exec(source, context)
-                    self.assertEqual(sys.path, [str(ROOT / "notebooks")])
+                    self.assertEqual(sys.path, [str(ROOT / "workshop-support")])
                     self.assertEqual(context["repository_root"] / "data", ROOT / "data")
                     import work_iq_auth
-                    self.assertEqual(Path(work_iq_auth.__file__), ROOT / "notebooks" / "work_iq_auth.py")
+                    self.assertEqual(Path(work_iq_auth.__file__), ROOT / "workshop-support" / "work_iq_auth.py")
 
     def test_notebook_paths_reject_working_directory_outside_repository(self):
         with tempfile.TemporaryDirectory() as directory:

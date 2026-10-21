@@ -224,13 +224,18 @@ class RecoveryTests(unittest.TestCase):
 
 
 class NotebookValidationTests(unittest.TestCase):
+    def notebook(self, filename):
+        matches = list((ROOT / "labs").glob(f"*/{filename}"))
+        self.assertEqual(len(matches), 1, f"Expected one lab notebook: {filename}")
+        return json.loads(matches[0].read_text(encoding="utf-8"))
+
     def test_notebook_syntax_and_cleared_outputs(self):
         for filename in (
             "part2-search-mcp-kb.ipynb", "part3-fabric-iq-to-kb.ipynb",
             "part4-work-iq-to-kb.ipynb", "part5-except-workiq-kb.ipynb",
             "part6-work-iq-fabric-iq-to-kb.ipynb",
         ):
-            notebook = json.loads((ROOT / "notebooks" / filename).read_text(encoding="utf-8"))
+            notebook = self.notebook(filename)
             for cell in notebook["cells"]:
                 if cell["cell_type"] == "code":
                     source = "".join(cell["source"])
@@ -245,7 +250,7 @@ class NotebookValidationTests(unittest.TestCase):
             ("part5-except-workiq-kb.ipynb", "c638792b", {"mcpServer"}),
             ("part6-work-iq-fabric-iq-to-kb.ipynb", "115e8899", {"mcpServer", "workIQ"}),
         ):
-            notebook = json.loads((ROOT / "notebooks" / filename).read_text(encoding="utf-8"))
+            notebook = self.notebook(filename)
             source = next("".join(c["source"]) for c in notebook["cells"] if c["id"] == cell_id)
             start = source.index("source_errors =")
             end = source.index("fabric_answer =" if "fabric_answer =" in source else "display(Markdown", start)
@@ -270,7 +275,7 @@ class NotebookValidationTests(unittest.TestCase):
                                     exec(validation, context)
 
     def test_part3_rejects_partial_fabric_success(self):
-        notebook = json.loads((ROOT / "notebooks" / "part3-fabric-iq-to-kb.ipynb").read_text(encoding="utf-8"))
+        notebook = self.notebook("part3-fabric-iq-to-kb.ipynb")
         source = next("".join(c["source"]) for c in notebook["cells"] if c["id"] == "0b5f69ae")
         validation = source[source.index("fabric_activities ="):source.index("display(Markdown(result.response")]
         activity = SimpleNamespace(type="fabricOntology", as_dict=lambda: {"type": "fabricOntology"})
@@ -299,7 +304,7 @@ class NotebookValidationTests(unittest.TestCase):
             ("part5-except-workiq-kb.ipynb", "c638792b"),
             ("part6-work-iq-fabric-iq-to-kb.ipynb", "115e8899"),
         ):
-            notebook = json.loads((ROOT / "notebooks" / filename).read_text(encoding="utf-8"))
+            notebook = self.notebook(filename)
             source = next("".join(c["source"]) for c in notebook["cells"] if c["id"] == cell_id)
             validation = source[source.index("MAX_FABRIC_ATTEMPTS ="):source.index("other_result =")]
             for failed in failures:

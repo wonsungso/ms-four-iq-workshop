@@ -48,7 +48,7 @@ This project-specific departure from the full paired-guide format was approved
 by the maintainer on 2026-10-21.
 
 The shared authentication module, requirements, Copilot CLI sidequest, and
-index restoration utility remain under [notebooks](notebooks).
+index restoration utility remain under [workshop-support](workshop-support).
 Run each Part notebook's initial path setup cell before its other code cells.
 It locates the repository root from the working directory and its parents,
 then adds the shared module directory to the Python import path.

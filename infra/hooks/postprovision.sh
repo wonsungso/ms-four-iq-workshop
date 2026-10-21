@@ -4,7 +4,7 @@ set -e
 echo "Running postprovision hook..."
 
 # Install Python dependencies first (needed for key fetching below)
-python3 -m pip install -r notebooks/requirements.txt --quiet 2>/dev/null
+python3 -m pip install -r workshop-support/requirements.txt --quiet 2>/dev/null
 
 # Write .env and fetch API keys using azure-identity (no az CLI needed)
 python3 infra/setup-env.py
@@ -23,4 +23,4 @@ fi
 # Mail.Send application permission and is not run as part of self-deploy.
 # For self-deploy, Part 4 (Work IQ) will use your own mailbox data.
 
-echo "Postprovision complete! If there were no errors, you can open notebooks/ to start the lab."
+echo "Postprovision complete! If there were no errors, you can open labs/ to start the lab."

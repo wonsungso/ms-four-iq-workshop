@@ -311,7 +311,7 @@ Dev Container를 사용하는 경우 이 단계는 건너뛰세요(컨테이너 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r notebooks/requirements.txt
+python -m pip install -r workshop-support/requirements.txt
 ```
 
 > **참고 (Windows):** Windows에서는 `venv`가 실행 파일을 `bin/`이 아닌 `Scripts/`에 생성합니다.
@@ -319,7 +319,7 @@ python -m pip install -r notebooks/requirements.txt
 > ```powershell
 > python -m venv .venv
 > .\.venv\Scripts\Activate.ps1
-> python -m pip install -r notebooks/requirements.txt
+> python -m pip install -r workshop-support/requirements.txt
 > ```
 
 노트북을 열기 전에 패키지를 설치하고, 노트북의 Python 환경으로 `.venv`를 선택하세요. 실습용 SDK `azure-search-documents==12.1.0b2`도 함께 설치됩니다.

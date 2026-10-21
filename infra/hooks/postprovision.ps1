@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 Write-Host "Running postprovision hook..."
 
 # Install Python dependencies first (needed for key fetching below)
-python -m pip install -r notebooks\requirements.txt --quiet
+python -m pip install -r workshop-support\requirements.txt --quiet
 if ($LASTEXITCODE -ne 0) { throw "Python dependency installation failed." }
 
 # Write .env and fetch API keys using azure-identity (no az CLI needed)
@@ -22,4 +22,4 @@ if ($env:FABRIC_CAPACITY_ID) {
     if ($LASTEXITCODE -ne 0) { throw "Fabric Lakehouse or Ontology setup failed." }
 }
 
-Write-Host "Postprovision complete! If there were no errors, you can open notebooks/ to start the lab."
+Write-Host "Postprovision complete! If there were no errors, you can open labs/ to start the lab."
