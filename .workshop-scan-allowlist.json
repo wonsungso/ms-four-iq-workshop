@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "kind": "endpoint",
+      "path": ".env.sample",
+      "sha256": "d7ad32fd7ab3dfb64eb2f1d0708521760d0ca6fee2e87e6b4ede1208af9e0bd1",
+      "reason": "Maintainer confirmed on 2026-10-21 that this exact endpoint is an intentional environment-variable placeholder, not a provisioned resource."
+    },
+    {
+      "kind": "identifier",
+      "path": "infra/tests/test_work_iq_auth.py",
+      "sha256": "05d17100b346c29d6760a0fdedcf8623945b53a26f7f811ae70835610f9e6797",
+      "reason": "Maintainer confirmed on 2026-10-21 that this repeated-digit TENANT_ID is a synthetic unit-test fixture, not a real tenant."
+    }
+  ]
+}

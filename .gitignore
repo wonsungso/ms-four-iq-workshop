@@ -30,3 +30,6 @@ __pycache__/
 
 # Local run logs from infra scripts
 infra/*.log
+
+# Local workshop standardization tools, decisions, and validation evidence
+local-only/

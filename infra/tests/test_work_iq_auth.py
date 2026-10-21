@@ -2,6 +2,8 @@ import ast
 import importlib.util
 import json
 from pathlib import Path
+import sys
+import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -15,6 +17,14 @@ from azure.search.documents.knowledgebases.models import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+NOTEBOOK_PATHS = {
+    1: ROOT / "labs" / "01-foundry-iq" / "part1-standard-foundry-iq-kb.ipynb",
+    2: ROOT / "labs" / "02-web-iq" / "part2-search-mcp-kb.ipynb",
+    3: ROOT / "labs" / "03-fabric-iq" / "part3-fabric-iq-to-kb.ipynb",
+    4: ROOT / "labs" / "04-work-iq" / "part4-work-iq-to-kb.ipynb",
+    5: ROOT / "labs" / "05-combined-iq" / "part5-except-workiq-kb.ipynb",
+    6: ROOT / "labs" / "06-all-iq" / "part6-work-iq-fabric-iq-to-kb.ipynb",
+}
 spec = importlib.util.spec_from_file_location("work_iq_auth", ROOT / "notebooks" / "work_iq_auth.py")
 auth = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(auth)
@@ -115,14 +125,8 @@ class WorkIQAuthTests(unittest.TestCase):
 
 class NotebookWorkIQTests(unittest.TestCase):
     def source(self, part, cell_id):
-        name = {
-            3: "part3-fabric-iq-to-kb.ipynb",
-            4: "part4-work-iq-to-kb.ipynb",
-            5: "part5-except-workiq-kb.ipynb",
-            6: "part6-work-iq-fabric-iq-to-kb.ipynb",
-        }[part]
-        nb = json.loads((ROOT / "notebooks" / name).read_text(encoding="utf-8"))
-        return "".join(next(c["source"] for c in nb["cells"] if c["id"] == cell_id))
+        nb = json.loads(NOTEBOOK_PATHS[part].read_text(encoding="utf-8"))
+        return "".join(next(c["source"] for c in nb["cells"] if c.get("id") == cell_id))
 
     def context(self):
         return {
@@ -451,7 +455,11 @@ class NotebookWorkIQTests(unittest.TestCase):
         self.assertIn("Do not send the entire composite question", text)
 
     def test_notebooks_parse_and_have_no_saved_outputs(self):
-        for path in (ROOT / "notebooks").glob("part*.ipynb"):
+        self.assertEqual(
+            set((ROOT / "labs").glob("*/*.ipynb")),
+            set(NOTEBOOK_PATHS.values()),
+        )
+        for path in NOTEBOOK_PATHS.values():
             nb = json.loads(path.read_text(encoding="utf-8"))
             cell_ids = [c["id"] for c in nb["cells"] if "id" in c]
             self.assertEqual(len(set(cell_ids)), len(cell_ids))
@@ -462,6 +470,90 @@ class NotebookWorkIQTests(unittest.TestCase):
                     ast.parse("".join(cell["source"]))
                     self.assertEqual(cell["outputs"], [])
                     self.assertIsNone(cell["execution_count"])
+
+    def test_notebook_paths_resolve_from_root_shared_and_each_lab_folder(self):
+        for part, path in NOTEBOOK_PATHS.items():
+            source = self.source(part, f"lab{part:02d}-paths")
+            for directory in (ROOT, ROOT / "notebooks", ROOT / "labs", path.parent):
+                with self.subTest(part=part, cwd=directory), \
+                     patch("pathlib.Path.cwd", return_value=directory), \
+                     patch.object(sys, "path", []):
+                    context = {}
+                    exec(source, context)
+                    self.assertEqual(context["repository_root"], ROOT)
+                    self.assertEqual(sys.path, [str(ROOT / "notebooks")])
+                    exec(source, context)
+                    self.assertEqual(sys.path, [str(ROOT / "notebooks")])
+                    self.assertEqual(context["repository_root"] / "data", ROOT / "data")
+                    import work_iq_auth
+                    self.assertEqual(Path(work_iq_auth.__file__), ROOT / "notebooks" / "work_iq_auth.py")
+
+    def test_notebook_paths_reject_working_directory_outside_repository(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for part in NOTEBOOK_PATHS:
+                with self.subTest(part=part), \
+                     patch("pathlib.Path.cwd", return_value=Path(directory)), \
+                     patch.object(sys, "path", []) as paths:
+                    with self.assertRaisesRegex(FileNotFoundError, "저장소 안에서"):
+                        exec(self.source(part, f"lab{part:02d}-paths"), {})
+                    self.assertEqual(paths, [])
+
+    def test_notebooks_load_environment_from_repository_root(self):
+        environment = {
+            "AZURE_SEARCH_SERVICE_ENDPOINT": "https://test.search.windows.net",
+            "AZURE_OPENAI_ENDPOINT": "https://example.invalid",
+            "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "test-chat",
+            "AZURE_OPENAI_CHATGPT_MODEL_NAME": "test-model",
+            "AZURE_TENANT_ID": TENANT_ID,
+            "WORK_IQ_TENANT_ID": TENANT_ID,
+            "WORK_IQ_APPLICATION_ID": APP_ID,
+            "WORK_IQ_CLIENT_ID": CLIENT_ID,
+            "WORK_IQ_FEDERATED_CREDENTIAL_ID": CREDENTIAL_ID,
+            "FABRIC_WORKSPACE_ID": TENANT_ID,
+            "FABRIC_ONTOLOGY_ID": APP_ID,
+            "WEB_IQ_KEY": "test",
+        }
+        for part, path in NOTEBOOK_PATHS.items():
+            notebook = json.loads(path.read_text(encoding="utf-8"))
+            source = next(
+                "".join(cell["source"]) for cell in notebook["cells"]
+                if cell["cell_type"] == "code" and "load_dotenv(" in "".join(cell["source"])
+            )
+            with self.subTest(part=part), \
+                 patch.dict("os.environ", environment, clear=True), \
+                 patch.dict("sys.modules", {"work_iq_auth": auth}), \
+                 patch("dotenv.load_dotenv") as load, \
+                 patch("azure.identity.DefaultAzureCredential"), \
+                 patch("builtins.print"):
+                exec(source, {"repository_root": ROOT})
+                load.assert_called_once_with(ROOT / ".env", override=True)
+
+    def test_part1_upload_uses_repository_data_without_network(self):
+        notebook = json.loads(NOTEBOOK_PATHS[1].read_text(encoding="utf-8"))
+        source = next(
+            "".join(cell["source"]) for cell in notebook["cells"]
+            if cell["cell_type"] == "code" and "data_dir =" in "".join(cell["source"])
+        )
+        client = Mock()
+        context = {"repository_root": ROOT, "index_client": client,
+                   "FILE_KNOWLEDGE_SOURCE_NAME": "test-file-source"}
+        with patch("builtins.print"):
+            exec(source, context)
+        self.assertEqual(
+            context["files_to_upload"],
+            [ROOT / "data" / "ai-search-data" / "filesource" / "MSFT_cloud_architecture_zava.pdf"],
+        )
+        client.upload_knowledge_source_file.assert_called_once()
+        self.assertGreater(len(client.upload_knowledge_source_file.call_args.args[1]), 0)
+
+    def test_part4_setup_invokes_repository_script_from_repository_root(self):
+        with patch("subprocess.run") as run, patch("builtins.print"):
+            exec(self.source(4, "7f603ab1"), {"repository_root": ROOT})
+        run.assert_called_once_with(
+            [sys.executable, str(ROOT / "infra" / "configure-work-iq.py")],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        run.return_value.check_returncode.assert_called_once_with()
 
     def test_latest_intent_shape(self):
         wire = KnowledgeBaseRetrievalRequest(

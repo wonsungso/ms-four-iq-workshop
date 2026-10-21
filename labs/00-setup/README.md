@@ -1,8 +1,18 @@
-# Azure 구독에 직접 배포하기
+---
+title: 00. Azure 구독 배포
+duration_minutes:
+last_updated: 2026-10-21
+---
 
-이 폴더에는 지식 베이스 인프라를 본인의 Azure 구독에 배포하기 위한 리소스가 들어 있습니다.
+# 00. Azure 구독 배포
 
-## 사전 요구 사항
+## 개요와 학습 목표
+
+지식 베이스 인프라를 본인의 Azure 구독에 배포합니다. Codespaces 또는 로컬 VS Code 환경을 준비하고, Azure AI Search·Azure OpenAI·Fabric 리소스와 샘플 데이터를 구성합니다. Part 4/6을 진행하려면 Work IQ의 결제 정책과 앱 등록도 준비합니다.
+
+아래 터미널 명령은 이 문서가 있는 폴더가 아니라 저장소 루트에서 실행합니다.
+
+## 사전 요구사항
 
 - 리소스를 생성할 수 있는 충분한 권한이 있는 **Azure 구독**
 - **GitHub 계정** (GitHub Codespaces 사용)
@@ -20,11 +30,11 @@
 1. [Microsoft Fabric](https://app.fabric.microsoft.com/)에 접속해 로그인합니다
 2. 안내에 따라 이메일을 입력하고 Microsoft Fabric free 계정 가입을 완료합니다
 
-<img src="img/signup_fabric.png" alt="Microsoft Fabric Free Plan 가입 화면" width="400"/>
+<img src="assets/signup-fabric.png" alt="Microsoft Fabric Free Plan 가입 화면" width="400"/>
 
 3. 아래와 같이 "세부 정보 확인" 단계가 뜨면 가입이 완료된 것입니다. **시작** 버튼을 클릭하세요
 
-<img src="img/signup_fabric_2.png" alt="Microsoft Fabric Free Plan 가입 완료 화면" width="400"/>
+<img src="assets/signup-fabric-2.png" alt="Microsoft Fabric Free Plan 가입 완료 화면" width="400"/>
 
 ### 2. Work IQ API 지출(Spending) 활성화 (Part 4/6 Work IQ 실습에 필요)
 
@@ -35,7 +45,7 @@ Work IQ를 사용하려면 결제 정책에 **Work IQ API** 서비스와 **실�
 3. "조직을 위한 기본 지출 정책 활성화" 패널에서 결제 방법(Azure 구독, 없으면 자동 생성 가능), 월별 지출 한도, 알림 등을 설정한 뒤 **Activate**를 클릭합니다.
 4. **Agents and services**에서 **Work IQ API**를 선택하고, 정책 대상에 실습할 사용자를 포함합니다.
 
-<img src="img/m365_admin_copilot_workiq_enable.png" alt="Microsoft 365 관리 센터에서 Work IQ API 지출 활성화" width="700"/>
+<img src="assets/m365-admin-copilot-workiq-enable.png" alt="Microsoft 365 관리 센터에서 Work IQ API 지출 활성화" width="700"/>
 
 > 설정이 반영되기까지 시간이 걸릴 수 있습니다.
 
@@ -58,7 +68,7 @@ fdcc1f02-fc51-4226-8753-f668596af7f7
 
 빨간 테두리의 필터 2개를 설정하면 아래처럼 **Work IQ**가 표시됩니다. 화면의 개체 ID는 예시 값입니다.
 
-<img src="img/workiq_enterprise_app_search.png" alt="모든 애플리케이션 유형과 애플리케이션 ID 시작 필터로 Work IQ를 찾은 결과" width="650"/>
+<img src="assets/workiq-enterprise-app-search.png" alt="모든 애플리케이션 유형과 애플리케이션 ID 시작 필터로 Work IQ를 찾은 결과" width="650"/>
 
 3. 앱이 있으면 **속성**에서 **사용자가 로그인할 수 있도록 설정됨**을 `예`로 설정합니다.
 4. 앱이 없다면 Global Administrator가 터미널에서 다음 명령으로 등록합니다. 로그인된 계정의 테넌트 ID를 `WORK_IQ_TENANT_ID` 환경변수에 자동으로 저장해 사용합니다. 아직 로그인하지 않았다면 먼저 `az login`을 실행하세요.
@@ -85,9 +95,9 @@ az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 
 빨간 테두리의 설정과 동의 상태를 확인하세요. 화면의 식별자는 예시 값입니다.
 
-<img src="img/workiq_expose_api.png" alt="연결 앱의 access_as_user 범위 설정" width="650"/>
+<img src="assets/workiq-expose-api.png" alt="연결 앱의 access_as_user 범위 설정" width="650"/>
 
-<img src="img/workiq_api_permissions.png" alt="WorkIQAgent.Ask 위임 권한과 관리자 동의" width="650"/>
+<img src="assets/workiq-api-permissions.png" alt="WorkIQAgent.Ask 위임 권한과 관리자 동의" width="650"/>
 
 #### 3-3. 사용자 로그인용 클라이언트 앱 구성
 
@@ -98,7 +108,7 @@ az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 
 > **엔터프라이즈 앱**이 아니라 **앱 등록** 안의 로그인 앱에서 설정합니다. Part 4/6은 브라우저에 코드를 입력하는 디바이스 코드 로그인을 사용합니다. 리디렉션 URI는 필요하지 않으며, 기존 `http://localhost` 설정은 남겨두어도 됩니다. [공식 설정 안내](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-configuration#enable-public-client-flow)
 
-<img src="img/workiq_client_permissions.png" alt="로그인 앱의 access_as_user 권한과 관리자 동의" width="650"/>
+<img src="assets/workiq-client-permissions.png" alt="로그인 앱의 access_as_user 권한과 관리자 동의" width="650"/>
 
 #### 노트북 연결 및 검증
 
@@ -127,11 +137,17 @@ Part 4/6은 `2026-08-01-preview` API를 사용합니다. 필요한 SDK와 MSAL�
   - Azure OpenAI 모델 배포
 - Azure RBAC 역할 할당
 
-## (권장) 빠른 시작 (GitHub Codespaces)
+## 소요 시간
 
-이 리포지토리는 [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json)을 통해 Python, Azure CLI, azd, Jupyter 확장이 미리 설치된 Codespace 환경을 제공합니다. 별도 로컬 설치 없이 바로 시작할 수 있습니다.
+<!-- TODO: 계정·권한 설정과 배포를 포함한 전체 준비 시간을 확인해 duration_minutes와 본문에 반영합니다. 아래 약 20분은 인프라 배포 대기 시간이며 전체 준비 시간이 아닙니다. -->
 
-### 1. 리포지토리 Fork 및 Codespace 생성
+## 실습 단계
+
+### 빠른 시작 (GitHub Codespaces, 권장)
+
+이 리포지토리는 [`.devcontainer/devcontainer.json`](../../.devcontainer/devcontainer.json)으로 Python, Azure CLI, azd, Jupyter 확장이 미리 설치된 Codespace 환경을 제공합니다. 별도 로컬 설치 없이 바로 시작할 수 있습니다.
+
+#### 1. 리포지토리 Fork 및 Codespace 생성
 
 여러 실습자가 동시에 진행하므로, 원본 리포지토리가 아닌 **본인 계정으로 Fork한 개인 리포지토리**에서 Codespace를 생성해야 합니다.
 
@@ -141,7 +157,7 @@ Part 4/6은 `2026-08-01-preview` API를 사용합니다. 필요한 SDK와 MSAL�
 - 컨테이너가 빌드되는 동안 잠시 기다립니다. 실습에 필요한 SDK(`azure-search-documents==12.1.0b2`)와 패키지가 자동으로 설치됩니다.
 - Codespace가 열리면 VS Code 웹 또는 데스크톱 앱에서 Terminal을 엽니다(Terminal > New Terminal)
 
-### 2. azd로 배포
+#### 2. azd로 배포
 
 ```bash
 azd auth login --use-device-code
@@ -179,21 +195,23 @@ azd up
 
 > **참고:** 배포 과정에서는 데모 이메일을 보내지 않습니다. Part 4의 이메일 준비 셀에서 본인의 Microsoft 365 계정으로 로그인하고 Microsoft Graph의 `User.Read`와 `Mail.Send` 위임 권한에 동의해 데모 이메일 3통을 본인 메일함으로 보냅니다. 테넌트 정책에 따라 관리자 동의가 필요할 수 있습니다.
 
-### (중요) azd up 진행 중 해야 할 일: Fabric IQ Ontology 기능 활성화
+#### azd up 진행 중 Fabric IQ Ontology 기능 활성화
 
 `azd up`이 AI Search/Fabric 용량을 프로비저닝하는 약 20분 동안, **아래 설정을 미리 켜두어야** postprovision 단계에서 Fabric IQ Ontology 생성이 실패하지 않습니다.
 
 1. [Azure Portal](https://portal.azure.com/)에서 방금 생성된 **Fabric 용량** 리소스명을 기억합니다.
 2. [Microsoft Fabric 관리 포털](https://app.fabric.microsoft.com/admin-portal/capacities)로 이동한 후 **패브릭 용량**에서 해당 용량 이름을 선택합니다.
 
-<img src="img/fabric_iq_ontology_enable_0.png" alt="Fabric IQ Ontology 미리 보기 기능 활성화" width="400"/>
+<img src="assets/fabric-iq-ontology-enable-0.png" alt="Fabric IQ Ontology 미리 보기 기능 활성화" width="400"/>
 
 3. **위임된 테넌트 설정** 탭에서 **"사용자가 Ontology(미리 보기) 항목을 만들 수 있음"** 항목을 찾습니다
 4. **테넌트 관리자 선택 재정의**를 체크하고 토글을 **사용**으로 켠 뒤, 적용 대상은 **"용량의 모든 사용자"** 를 선택하고 **적용**을 클릭합니다
 
-<img src="img/fabric_iq_ontology_enable.png" alt="Fabric IQ Ontology 미리 보기 기능 활성화" width="700"/>
+<img src="assets/fabric-iq-ontology-enable.png" alt="Fabric IQ Ontology 미리 보기 기능 활성화" width="700"/>
 
 > **참고:** 이 설정이 반영되지 않은 채로 `azd up`이 끝나면 postprovision 단계에서 Fabric Lakehouse/테이블은 생성되지만 **Ontology 생성만 실패**할 수 있습니다. 아래 "(Troubleshooting) Ontology 생성이 실패했다면" 항목을 참고해 재시도하세요.
+
+<a id="ontology-create"></a>
 
 <details>
 <summary>(Troubleshooting) Ontology 생성이 실패했다면</summary>
@@ -211,6 +229,8 @@ azd hooks run postprovision
 `ConnectionResetError`나 타임아웃으로 생성 응답을 받지 못해도 Fabric에는 Ontology가 이미 만들어졌을 수 있습니다. 최신 생성 스크립트는 연결 오류가 발생하면 같은 이름의 항목이 실제로 저장됐는지 확인하고 발견된 항목을 재사용합니다. 항목을 찾지 못하면 오류를 그대로 보고합니다. 수동 복구할 때도 포털에서 실제 항목을 먼저 확인하고 해당 ID를 `.env`의 `FABRIC_ONTOLOGY_ID`에 넣어 기존 항목 복구를 실행하세요. 테넌트 기능 설정 오류로 단정하거나 무조건 새 Ontology를 만들지 마세요.
 
 </details>
+
+<a id="ontology-bindings"></a>
 
 <details>
 <summary>(Troubleshooting) Ontology는 있지만 데이터 원본이 없다는 오류</summary>
@@ -236,6 +256,8 @@ Part 3 커널을 다시 시작하고 환경 변수 로드부터 실행하세요.
 
 </details>
 
+<a id="external-source-auth"></a>
+
 <details>
 <summary>(Troubleshooting) Web IQ 또는 Work IQ만 실패하는 경우</summary>
 
@@ -250,20 +272,20 @@ Part 2, Part 4, Part 5, Part 6은 소스 활동에 오류가 있거나 필요한
 
 </details>
 
-### 3. 워크샵 시작
+#### 3. 워크샵 시작
 
-<img src="img/provision_completed.png" alt="Provision 완료" width="400"/>
+<img src="assets/provision-completed.png" alt="Provision 완료" width="400"/>
 
 > ✅ Codespaces로 진행했다면 배포가 모두 끝났습니다. 아래 "로컬 환경에서 배포하기" 섹션은 건너뛰고 바로 노트북을 진행하세요.
 
-[Part 4의 시작 준비](notebooks/part4-work-iq-to-kb.ipynb#시작-준비-search-관리-id-연결)에서 Search 관리 ID 연결과 환경 변수 자동 설정을 진행합니다. 배포 가이드로 돌아올 필요 없이 노트북 안의 안내를 따라가세요.
+[Part 4의 시작 준비](../04-work-iq/part4-work-iq-to-kb.ipynb#시작-준비-search-관리-id-연결)에서 Search 관리 ID 연결과 환경 변수 자동 설정을 진행합니다. 배포 가이드로 돌아올 필요 없이 노트북 안의 안내를 따라가세요.
 
-VS Code에서 [notebooks](./notebooks) 폴더를 열고 **[part1-standard-foundry-iq-kb.ipynb](./notebooks/part1-standard-foundry-iq-kb.ipynb) 부터 시작**하세요.
+VS Code에서 [Part 1 노트북](../01-foundry-iq/part1-standard-foundry-iq-kb.ipynb)을 열고 사전 요구사항을 확인한 뒤 첫 코드 셀부터 순서대로 실행하세요.
 
 ---
 
 <details>
-<summary><h2 style="display: inline;">(대안) 로컬 환경에서 배포하기</h2></summary>
+<summary><h3 id="대안-로컬-환경에서-배포하기" style="display: inline;">(대안) 로컬 환경에서 배포하기</h3></summary>
 
 Codespaces 대신 로컬 VS Code에서 진행하려면 다음이 추가로 필요합니다.
 
@@ -275,14 +297,14 @@ Codespaces 대신 로컬 VS Code에서 진행하려면 다음이 추가로 필�
 
 또는 로컬에 **Docker**와 VS Code **Dev Containers** 확장이 설치되어 있다면, 클론 후 폴더를 열 때 뜨는 "Reopen in Container" 안내를 선택해 Codespaces와 동일한 컨테이너 환경을 로컬에서 사용할 수 있습니다.
 
-### 1. 리포지토리 클론
+#### 1. 리포지토리 클론
 
 ```bash
 git clone https://github.com/wonsungso/ms-four-iq-workshop.git
 cd ms-four-iq-workshop
 ```
 
-### 2. Python 가상 환경 생성 및 패키지 설치
+#### 2. Python 가상 환경 생성 및 패키지 설치
 
 Dev Container를 사용하는 경우 이 단계는 건너뛰세요(컨테이너 자체가 격리된 환경입니다).
 
@@ -302,13 +324,19 @@ python -m pip install -r notebooks/requirements.txt
 
 노트북을 열기 전에 패키지를 설치하고, 노트북의 Python 환경으로 `.venv`를 선택하세요. 실습용 SDK `azure-search-documents==12.1.0b2`도 함께 설치됩니다.
 
-### 3. azd로 배포 및 워크샵 시작
+#### 3. azd로 배포 및 워크샵 시작
 
-위 [빠른 시작 (GitHub Codespaces, 권장)](#권장-빠른-시작-github-codespaces)의 2~3단계와 동일하게 `azd auth login`, `azd up`을 실행한 뒤 노트북을 시작하세요.
+위 [빠른 시작 (GitHub Codespaces, 권장)](#빠른-시작-github-codespaces-권장)의 2~3단계와 동일하게 `azd auth login`, `azd up`을 실행한 뒤 노트북을 시작하세요.
 
 </details>
 
-## 정리
+## 검증
+
+`azd up`의 프로비저닝과 postprovision이 오류 없이 끝났는지 확인합니다. 저장소 루트의 `.env`에 배포된 서비스와 Fabric 설정이 기록되고, Part 1에서 사용할 `hrdocs`·`healthdocs` 인덱스가 준비되어야 합니다.
+
+배포 완료만으로 모든 지식 소스의 조회가 검증되는 것은 아닙니다. Fabric은 Part 3에서 실제 데이터 조회를, Work IQ는 Part 4에서 사용자 로그인과 업무 데이터 참조를 확인합니다.
+
+## 정리 (Clean-up)
 
 모든 리소스를 삭제하고 지속적인 과금을 피하려면:
 
@@ -316,9 +344,23 @@ python -m pip install -r notebooks/requirements.txt
 azd down
 ```
 
+Part 1~6에서 같은 배포를 사용하므로 전체 실습이 끝난 뒤 저장소 루트에서 실행합니다.
+
+<!-- TODO: Azure 배포 외의 Work IQ 결제 정책, Entra 앱 등록, 데모 메일과 Fabric 항목의 정리 범위를 저자가 확인합니다. azd down이 이 항목을 모두 제거한다고 가정하지 않습니다. -->
+
+## 트러블슈팅
+
+- [Ontology 생성 실패](#ontology-create)
+- [기존 Ontology 바인딩 검증 및 복구](#ontology-bindings)
+- [Web IQ·Work IQ 인증과 소스 조회 오류](#external-source-auth)
+
 ## 추가 리소스
 
 - [Azure AI Search 문서](https://learn.microsoft.com/azure/search/)
 - [Azure OpenAI 서비스 문서](https://learn.microsoft.com/azure/ai-services/openai/)
 - [Azure Bicep 문서](https://learn.microsoft.com/azure/azure-resource-manager/bicep/)
 - [Microsoft Foundry 커뮤니티 Discord](https://aka.ms/AIFoundryDiscord-Ignite25)
+
+## 이전·다음
+
+[워크샵 홈](../../README.md) · [다음: Part 1. Foundry IQ](../01-foundry-iq/part1-standard-foundry-iq-kb.ipynb)
