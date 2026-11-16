@@ -102,7 +102,7 @@ Work IQ의 결제·테넌트·앱 등록을 준비하지 못했다면 Part 4를 
 ### 💻 사용 기술
 
 1. Foundry IQ (Azure AI Search)
-1. Azure OpenAI (gpt-5.4, text-embedding-3-large)
+1. Microsoft Foundry (gpt-5.4, text-embedding-3-large)
 1. Model Context Protocol (MCP)
 1. Microsoft Fabric IQ 및 Work IQ
 1. Python 및 Jupyter Notebooks

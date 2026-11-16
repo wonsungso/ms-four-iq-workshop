@@ -8,7 +8,7 @@ last_updated: 2026-10-21
 
 ## 개요와 학습 목표
 
-지식 베이스 인프라를 본인의 Azure 구독에 배포합니다. Codespaces 또는 로컬 VS Code 환경을 준비하고, Azure AI Search·Azure OpenAI·Fabric 리소스와 샘플 데이터를 구성합니다. Part 4/6을 진행하려면 Work IQ의 결제 정책과 앱 등록도 준비합니다.
+지식 베이스 인프라를 본인의 Azure 구독에 배포합니다. Codespaces 또는 로컬 VS Code 환경을 준비하고, Azure AI Search·Microsoft Foundry·Fabric 리소스와 샘플 데이터를 구성합니다. Part 4/6을 진행하려면 Work IQ의 결제 정책과 앱 등록도 준비합니다.
 
 아래 터미널 명령은 이 문서가 있는 폴더가 아니라 저장소 루트에서 실행합니다.
 
