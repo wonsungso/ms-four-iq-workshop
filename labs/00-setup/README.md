@@ -8,7 +8,7 @@ last_updated: 2026-10-21
 
 ## 개요와 학습 목표
 
-지식 베이스 인프라를 본인의 Azure 구독에 배포합니다. Codespaces 또는 로컬 VS Code 환경을 준비하고, Azure AI Search·Azure OpenAI·Fabric 리소스와 샘플 데이터를 구성합니다. Part 4/6을 진행하려면 Work IQ의 결제 정책과 앱 등록도 준비합니다.
+지식 베이스 인프라를 본인의 Azure 구독에 배포합니다. Codespaces 또는 로컬 VS Code 환경을 준비하고, Azure AI Search·Microsoft Foundry·Fabric 리소스와 샘플 데이터를 구성합니다. Part 4/6을 진행하려면 Work IQ의 결제 정책과 앱 등록도 준비합니다.
 
 아래 터미널 명령은 이 문서가 있는 폴더가 아니라 저장소 루트에서 실행합니다.
 
@@ -17,6 +17,7 @@ last_updated: 2026-10-21
 - 리소스를 생성할 수 있는 충분한 권한이 있는 **Azure 구독**
 - **GitHub 계정** (GitHub Codespaces 사용)
 - **Microsoft Fabric Free Plan 가입** (Fabric Capacity 배포에 필요)
+- **유료 Azure 구독** (Web IQ 계정 배포에 필요, 무료 체험 크레딧으로는 생성되지 않음)
 - **Work IQ 사용량 기반 billing plan 및 조회 사용자 연결** (Part 4/6 실습에 필요)
 - **Work IQ API 지출(Spending) 활성화** (Part 4/6 실습에 필요, [Microsoft 365 관리 센터](https://admin.cloud.microsoft/)에서 설정)
 - **Work IQ 테넌트 활성화 및 고객 소유 앱 등록** (Part 4/6 실습에 필요, 아래 3번 절차 참고)
@@ -135,6 +136,7 @@ Part 4/6은 `2026-08-01-preview` API를 사용합니다. 필요한 SDK와 MSAL�
   - Azure AI Search 서비스
   - Microsoft Foundry 프로젝트
   - Azure OpenAI 모델 배포
+  - Web IQ 계정
 - Azure RBAC 역할 할당
 
 ## 소요 시간
@@ -188,7 +190,7 @@ azd up
 
 이 명령은 다음을 수행합니다.
 
-- 모든 Azure 리소스 프로비저닝 (AI Search, Foundry 프로젝트, OpenAI 모델, Fabric 용량)
+- 모든 Azure 리소스 프로비저닝 (AI Search, Foundry 프로젝트, OpenAI 모델, Fabric 용량, Web IQ 계정)
 - 엔드포인트와 모델 배포 이름 등 설정값이 담긴 `.env` 파일 작성 (Azure 서비스는 Entra ID 인증을 사용하며 Web IQ API 키는 별도 설정)
 - 검색 인덱스 생성 및 샘플 데이터 업로드
 - Zava DIY 데이터셋과 온톨로지로 Fabric Lakehouse 설정
@@ -271,6 +273,17 @@ Azure 리소스가 정상 생성돼도 외부 지식 소스의 인증과 사용�
 Part 2, Part 4, Part 5, Part 6은 소스 활동에 오류가 있거나 필요한 Web IQ/Work IQ 참조가 없으면 답변 표시 전에 실패를 보고합니다. 내부 문서나 Fabric 답변만 반환됐다고 전체 실습 성공으로 판단하지 않습니다. 워크샵 데이터의 재고 집계 검증 기준은 `HAND TOOLS`, 총 `stockLevel` **1,635**입니다.
 
 </details>
+
+<a id="web-iq-key"></a>
+
+#### azd up 완료 후 Web IQ API 키 발급
+
+`azd up`은 구독에 Web IQ 계정 리소스도 함께 만들고, 리소스 ID를 저장소 루트 `.env`의 `WEB_IQ_RESOURCE_ID`에 기록합니다.
+
+1. [Web IQ Developer Portal](https://webiq.microsoft.ai)에서 **Get Started**를 선택하고, 리소스를 만든 Azure 구독을 소유한 계정으로 로그인합니다.
+2. 구독과 `.env`의 `WEB_IQ_RESOURCE_ID`에 해당하는 Web IQ 리소스를 선택하고 **Finish**를 클릭합니다.
+3. 포털이 발급한 AppID가 왼쪽 위 드롭다운에 표시되는지 확인한 뒤, **API 키 만들기**로 키를 발급합니다.
+4. 발급한 키로 저장소 루트 `.env`의 `WEB_IQ_KEY=your-web-iq-key` 자리 표시자를 교체합니다. 키는 저장소나 공유 로그에 넣지 마세요.
 
 #### 3. 워크샵 시작
 

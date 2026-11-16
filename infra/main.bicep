@@ -15,6 +15,12 @@ param fabricAdminUpn string = ''
 @description('Service principal object ID for Fabric capacity admin access')
 param spPrincipalId string = ''
 
+@description('Whether to deploy a Web IQ account for live web grounding')
+param deployWebIq bool = true
+
+@description('Web IQ account SKU')
+param webIqSku string = 'G3'
+
 @description('The name prefix for all resources')
 param resourcePrefix string = 'fiq'
 
@@ -59,6 +65,7 @@ var resourceNames = {
   microsoftFoundryProject: '${resourcePrefix}-project-${uniqueSuffix}'
   embeddingDeployment: 'text-embedding-3-large'
   llmDeployment: 'gpt-5.4'
+  webIq: '${resourcePrefix}-webiq-${uniqueSuffix}'
 }
 
 // ===============================================
@@ -371,3 +378,26 @@ output FABRIC_CAPACITY_ID string = deployFabricCapacity ? fabricCapacity.id : ''
 
 @description('Azure tenant ID for deployment')
 output AZURE_TENANT_ID string = tenant().tenantId
+
+// ===============================================
+// MICROSOFT WEB IQ ACCOUNT (live web grounding)
+// ===============================================
+
+@description('Microsoft Web IQ account for live web grounding (Part 2, 5, 6 knowledge sources)')
+resource webIqAccount 'Microsoft.WebIQ/accounts@2026-06-01-preview' = if (deployWebIq) {
+  name: resourceNames.webIq
+  location: 'global'
+  kind: 'WebIQ.Grounding'
+  sku: {
+    name: webIqSku
+  }
+  properties: {
+    statisticsEnabled: false
+  }
+}
+
+@description('Web IQ account resource ID (connect this in the Web IQ Developer Portal to create an API key)')
+output WEB_IQ_RESOURCE_ID string = deployWebIq ? webIqAccount.id : ''
+
+@description('Web IQ account name')
+output WEB_IQ_ACCOUNT_NAME string = deployWebIq ? webIqAccount.name : ''

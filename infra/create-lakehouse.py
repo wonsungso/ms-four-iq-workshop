@@ -98,12 +98,12 @@ def reorder_env_sections():
     effects here:
     - FABRIC_WORKSPACE_ID / FABRIC_ONTOLOGY_ID end up detached from the
       "Fabric configuration" section (next to FABRIC_CAPACITY_ID).
-    - The WEB_IQ_KEY block (written last by setup-env.py) gets pushed into
-      the middle of the file.
+    - The WEB_IQ_RESOURCE_ID/WEB_IQ_KEY block (written last by setup-env.py)
+      gets pushed into the middle of the file.
 
     This re-groups FABRIC_WORKSPACE_ID/FABRIC_ONTOLOGY_ID with
-    FABRIC_CAPACITY_ID, moves WEB_IQ_KEY back to the end, and collapses any
-    stray blank lines left behind by the moves.
+    FABRIC_CAPACITY_ID, moves the Web IQ block back to the end, and collapses
+    any stray blank lines left behind by the moves.
     """
     env_path = os.path.join(REPO_ROOT, ".env")
     if not os.path.exists(env_path):
@@ -114,16 +114,28 @@ def reorder_env_sections():
     fabric_extra = []
     web_iq_block = []
     other_lines = []
+    pending_comments = []
 
+    # Comment lines are buffered and routed together with whichever value
+    # line follows them, so a multi-line comment block (like the Web IQ
+    # header) moves as a unit instead of being split line-by-line.
     for line in lines:
-        if line.startswith("FABRIC_WORKSPACE_ID=") or line.startswith("FABRIC_ONTOLOGY_ID="):
+        if line.strip().startswith("#"):
+            pending_comments.append(line)
+        elif line.startswith("FABRIC_WORKSPACE_ID=") or line.startswith("FABRIC_ONTOLOGY_ID="):
+            other_lines.extend(pending_comments)
+            pending_comments = []
             fabric_extra.append(line)
-        elif line.startswith("WEB_IQ_KEY="):
-            if other_lines and other_lines[-1].strip().startswith("# Web IQ"):
-                web_iq_block.append(other_lines.pop())
+        elif line.startswith("WEB_IQ_RESOURCE_ID=") or line.startswith("WEB_IQ_KEY="):
+            web_iq_block.extend(pending_comments)
+            pending_comments = []
             web_iq_block.append(line)
         else:
+            other_lines.extend(pending_comments)
+            pending_comments = []
             other_lines.append(line)
+
+    other_lines.extend(pending_comments)
 
     if fabric_extra:
         for idx, line in enumerate(other_lines):
