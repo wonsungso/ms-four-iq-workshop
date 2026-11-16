@@ -48,7 +48,11 @@ AZURE_TENANT_ID={os.environ['AZURE_TENANT_ID']}
 # Fabric configuration (populated by lakehouse setup if capacity was deployed)
 FABRIC_CAPACITY_ID={os.environ.get('FABRIC_CAPACITY_ID', '')}
 
-# Web IQ (live web search) - replace with your own key to use Part 2's Web IQ knowledge source
+# Web IQ (live web search). The account below is auto-provisioned by azd up.
+# Connect WEB_IQ_RESOURCE_ID in the Web IQ Developer Portal (https://webiq.microsoft.ai)
+# to create an API key, then replace WEB_IQ_KEY with that key to use Part 2's
+# Web IQ knowledge source.
+WEB_IQ_RESOURCE_ID={os.environ.get('WEB_IQ_RESOURCE_ID', '')}
 WEB_IQ_KEY={web_iq_key}
 """,
     encoding="utf-8",

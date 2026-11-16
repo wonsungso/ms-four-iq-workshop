@@ -13,6 +13,9 @@
     },
     "fabricAdminUpn": {
       "value": "${FABRIC_ADMIN_UPN}"
+    },
+    "deployWebIq": {
+      "value": "${DEPLOY_WEB_IQ=true}"
     }
   }
 }
