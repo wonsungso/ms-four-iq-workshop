@@ -1,5 +1,6 @@
 import copy
 import importlib.util
+import os
 from pathlib import Path
 import runpy
 import tempfile
@@ -19,6 +20,42 @@ API = "22222222-2222-2222-2222-222222222222"
 CLIENT = "33333333-3333-3333-3333-333333333333"
 FIC = "44444444-4444-4444-4444-444444444444"
 SCOPE = "55555555-5555-5555-5555-555555555555"
+
+class SetupEnvironmentTests(unittest.TestCase):
+    def test_retry_preserves_fabric_ids_only_for_same_deployment(self):
+        source = (ROOT / "infra" / "setup-env.py").read_text(encoding="utf-8")
+        for same_deployment in (True, False):
+            with self.subTest(same_deployment=same_deployment), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                path = root / ".env"
+                path.write_text(
+                    "AZURE_SEARCH_SERVICE_ENDPOINT=https://original.search.windows.net\n"
+                    "FABRIC_WORKSPACE_ID=existing-workspace\n"
+                    "FABRIC_ONTOLOGY_ID=existing-ontology\n"
+                    "WEB_IQ_KEY='test-key#value'\n"
+                    f"WORK_IQ_CLIENT_ID={CLIENT}\n",
+                    encoding="utf-8",
+                )
+                environment = {
+                    "AZURE_SEARCH_SERVICE_ENDPOINT": (
+                        "https://original.search.windows.net" if same_deployment
+                        else "https://different.search.windows.net"
+                    ),
+                    "AZURE_OPENAI_ENDPOINT": "https://example.invalid",
+                    "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "test-chat",
+                    "AZURE_OPENAI_EMBEDDING_DEPLOYMENT": "test-embedding",
+                    "AZURE_TENANT_ID": TENANT,
+                }
+                with patch.dict(os.environ, environment, clear=True), patch("builtins.print") as output:
+                    exec(compile(source, "setup-env.py", "exec"), {
+                        "__file__": str(root / "infra" / "setup-env.py"),
+                    })
+                values = dotenv_values(path)
+                self.assertEqual(values["FABRIC_WORKSPACE_ID"], "existing-workspace" if same_deployment else "")
+                self.assertEqual(values["FABRIC_ONTOLOGY_ID"], "existing-ontology" if same_deployment else "")
+                self.assertEqual(values["WEB_IQ_KEY"], "test-key#value")
+                self.assertEqual(values["WORK_IQ_CLIENT_ID"], CLIENT)
+                self.assertNotIn("test-key#value", str(output.call_args_list))
 
 
 class ConfigureWorkIQTests(unittest.TestCase):

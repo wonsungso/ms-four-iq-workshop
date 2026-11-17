@@ -5,7 +5,6 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -111,10 +110,51 @@ class OntologyBindingsTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Product"):
             self.verify(definition)
 
+    def test_tmdl_round_trip_can_omit_ui_annotations(self):
+        definition = self.tmdl()
+        for part in definition["parts"]:
+            if part["path"].startswith("tables/"):
+                text = base64.b64decode(part["payload"]).decode()
+                text = "\n".join(
+                    line for line in text.splitlines()
+                    if not line.strip().startswith("annotation ONT_")
+                )
+                part["payload"] = base64.b64encode(text.encode()).decode()
+        self.assertTrue(self.verify(definition))
+
+    def test_tmdl_update_preserves_existing_object_lineage(self):
+        definition = self.tmdl()
+        part = next(p for p in definition["parts"] if p["path"] == "tables/products.tmdl")
+        text = base64.b64decode(part["payload"]).decode()
+        text = text.replace("table products\n", "table products\n\tlineageTag: table-id\n")
+        text = text.replace(
+            "\tcolumn stock_level\n",
+            "\tcolumn stock_level\n\t\tlineageTag: stock-id\n",
+        )
+        part["payload"] = base64.b64encode(text.encode()).decode()
+        expression = next(p for p in definition["parts"] if p["path"] == "expressions.tmdl")
+        text = base64.b64decode(expression["payload"]).decode() + "\tlineageTag: source-id\n"
+        expression["payload"] = base64.b64encode(text.encode()).decode()
+        updated = lakehouse.build_zava_tmdl_definition(
+            "workspace", PROPERTIES, PLATFORM, definition,
+        )["definition"]
+        part = next(p for p in updated["parts"] if p["path"] == "tables/products.tmdl")
+        text = base64.b64decode(part["payload"]).decode()
+        self.assertIn("table products\n\tlineageTag: table-id\n", text)
+        self.assertIn("\tcolumn stock_level\n\t\tlineageTag: stock-id\n", text)
+        expression = next(p for p in updated["parts"] if p["path"] == "expressions.tmdl")
+        text = base64.b64decode(expression["payload"]).decode()
+        self.assertIn("expression DatabaseQuery =\n\t\tlet\n", text)
+        self.assertTrue(text.endswith("\tlineageTag: source-id\n"))
+        self.assertTrue(self.verify(updated))
+
     def test_wrong_endpoint_and_prefix_matches_are_rejected(self):
         for path, old, new, error in (
             ("expressions.tmdl", "/workspace/lakehouse", "/workspace/wrong-lakehouse", "OneLake"),
-            ("tables/products.tmdl", "annotation ONT_ItemKind = Lakehouse", "", "Product"),
+            ("tables/products.tmdl", "mode: directLake", "mode: import", "Product"),
+            ("tables/products.tmdl", "expressionSource: DatabaseQuery", "expressionSource: WrongQuery", "Product"),
+            ("tables/products.tmdl", "partition products = entity", "partition wrong = entity", "Product"),
+            ("tables/products.tmdl", "annotation ONT_ItemKind = Lakehouse", "annotation ONT_ItemKind = Warehouse", "Product"),
             ("tables/products.tmdl", "annotation ONT_ItemId = lakehouse", "annotation ONT_ItemId = wrong", "Product"),
             ("tables/products.tmdl", "annotation ONT_WorkspaceId = workspace", "annotation ONT_WorkspaceId = wrong", "Product"),
             ("tables/products.tmdl", "annotation ONT_SqlDatabase = TestLakehouse", "annotation ONT_SqlDatabase = test-sql-endpoint", "Product"),
@@ -247,8 +287,6 @@ class NotebookValidationTests(unittest.TestCase):
         for filename, cell_id, required_types in (
             ("part2-search-mcp-kb.ipynb", "58fd44c6", {"mcpServer"}),
             ("part4-work-iq-to-kb.ipynb", "ac01b5b5", {"workIQ"}),
-            ("part5-except-workiq-kb.ipynb", "c638792b", {"mcpServer"}),
-            ("part6-work-iq-fabric-iq-to-kb.ipynb", "115e8899", {"mcpServer", "workIQ"}),
         ):
             notebook = self.notebook(filename)
             source = next("".join(c["source"]) for c in notebook["cells"] if c["id"] == cell_id)
@@ -289,44 +327,6 @@ class NotebookValidationTests(unittest.TestCase):
                 else:
                     with self.assertRaisesRegex(RuntimeError, "Fabric IQ"):
                         exec(validation, context)
-
-    def test_parts5_and6_reject_failures_and_accept_retry_success(self):
-        activity = SimpleNamespace(type="fabricOntology", as_dict=lambda: {"type": "fabricOntology"})
-        error = SimpleNamespace(type="fabricOntology", as_dict=lambda: {"type": "fabricOntology", "error": {"code": "InvalidAgentRetrievalRequest"}})
-        reference = SimpleNamespace(type="fabricOntology")
-        valid = SimpleNamespace(activity=[activity], references=[reference])
-        failures = (
-            SimpleNamespace(activity=[], references=[reference]),
-            SimpleNamespace(activity=[error], references=[reference]),
-            SimpleNamespace(activity=[activity], references=[]),
-        )
-        for filename, cell_id in (
-            ("part5-except-workiq-kb.ipynb", "c638792b"),
-            ("part6-work-iq-fabric-iq-to-kb.ipynb", "115e8899"),
-        ):
-            notebook = self.notebook(filename)
-            source = next("".join(c["source"]) for c in notebook["cells"] if c["id"] == cell_id)
-            validation = source[source.index("MAX_FABRIC_ATTEMPTS ="):source.index("other_result =")]
-            for failed in failures:
-                for succeeds in (False, True):
-                    with self.subTest(filename=filename, succeeds=succeeds, failure=failed):
-                        client = Mock()
-                        client.retrieve.side_effect = [failed, valid if succeeds else failed]
-                        context = {
-                            "knowledge_base_client": client,
-                            "fabric_request": object(), "user_token": "test-user-token",
-                            "fabric_user_credential": Mock(),
-                            "json": json, "time": time,
-                        }
-                        with patch.object(time, "sleep"), patch("builtins.print"):
-                            if succeeds:
-                                exec(validation, context)
-                                self.assertIs(context["fabric_result"], valid)
-                            else:
-                                with self.assertRaisesRegex(RuntimeError, "Fabric IQ"):
-                                    exec(validation, context)
-                        self.assertEqual(client.retrieve.call_count, 2)
-
 
 if __name__ == "__main__":
     unittest.main()

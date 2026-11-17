@@ -546,6 +546,32 @@ class NotebookWorkIQTests(unittest.TestCase):
         client.upload_knowledge_source_file.assert_called_once()
         self.assertGreater(len(client.upload_knowledge_source_file.call_args.args[1]), 0)
 
+    def test_part3_repair_uses_repository_root_from_lab_directory(self):
+        with patch("subprocess.run") as run, patch("builtins.print"):
+            exec(self.source(3, "939154c0"), {"repository_root": ROOT})
+        run.assert_called_once_with(
+            [sys.executable, ROOT / "infra" / "recreate-fabric-ontology.py", "--repair-existing"],
+            cwd=ROOT, check=True, text=True,
+        )
+
+    def test_mail_send_failure_stops_before_success_message(self):
+        for accepted in (0, 1):
+            with self.subTest(accepted=accepted), \
+                 patch("azure.identity.DeviceCodeCredential"), \
+                 patch.dict("sys.modules", {"work_iq_auth": auth}), \
+                 patch("requests.get") as get, patch("requests.post") as post, \
+                 patch("builtins.print") as output:
+                get.return_value.ok = True
+                get.return_value.json.return_value = {"mail": "participant@example.invalid"}
+                post.side_effect = [
+                    *[Mock(status_code=202) for _ in range(accepted)],
+                    Mock(status_code=403, text="Mail.Send consent required"),
+                ]
+                with self.assertRaisesRegex(RuntimeError, "데모 이메일 발송 실패"):
+                    exec(self.source(4, "46755bcf"), {"AZURE_TENANT_ID": TENANT_ID})
+                self.assertEqual(post.call_count, accepted + 1)
+                self.assertNotIn("데모 이메일 발송 완료", str(output.call_args_list))
+
     def test_part4_setup_invokes_repository_script_from_repository_root(self):
         with patch("subprocess.run") as run, patch("builtins.print"):
             exec(self.source(4, "7f603ab1"), {"repository_root": ROOT})

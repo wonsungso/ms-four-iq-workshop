@@ -2,11 +2,11 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "Running postprovision hook..."
 
-# Install Python dependencies first (needed for key fetching below)
+# Install workshop dependencies.
 python -m pip install -r workshop-support\requirements.txt --quiet
 if ($LASTEXITCODE -ne 0) { throw "Python dependency installation failed." }
 
-# Write .env and fetch API keys using azure-identity (no az CLI needed)
+# Write notebook settings while preserving locally configured Web IQ keys.
 python infra\setup-env.py
 if ($LASTEXITCODE -ne 0) { throw "Environment setup failed." }
 
