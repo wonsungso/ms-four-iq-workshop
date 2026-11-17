@@ -3,10 +3,10 @@ set -e
 
 echo "Running postprovision hook..."
 
-# Install Python dependencies first (needed for key fetching below)
+# Install workshop dependencies.
 python3 -m pip install -r workshop-support/requirements.txt --quiet 2>/dev/null
 
-# Write .env and fetch API keys using azure-identity (no az CLI needed)
+# Write notebook settings while preserving locally configured Web IQ keys.
 python3 infra/setup-env.py
 
 # Create indexes and upload data

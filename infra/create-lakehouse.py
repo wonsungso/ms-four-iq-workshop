@@ -180,7 +180,7 @@ def get_credential():
         # Always use DefaultAzureCredential - it picks up AZURE_CLIENT_ID,
         # AZURE_CLIENT_SECRET, AZURE_TENANT_ID env vars (EnvironmentCredential)
         # which work in headless/subprocess environments (e.g., CI or hosted VMs).
-        _CREDENTIAL = DefaultAzureCredential()
+        _CREDENTIAL = DefaultAzureCredential(process_timeout=60)
     return _CREDENTIAL
 
 
@@ -845,7 +845,8 @@ def create_tmdl_part(path: str, text: str) -> dict:
 
 
 def build_zava_tmdl_definition(
-    workspace_id: str, lakehouse_properties: dict, platform_part: dict
+    workspace_id: str, lakehouse_properties: dict, platform_part: dict,
+    current_definition: dict | None = None,
 ) -> dict:
     """Bind the same workshop entities through DirectLake in new-experience items."""
     endpoint = lakehouse_properties["properties"]["sqlEndpointProperties"]
@@ -919,6 +920,38 @@ def build_zava_tmdl_definition(
             ),
         ])
     parts.append(create_tmdl_part("model.tmdl", "\n".join(model) + "\n"))
+    if current_definition:
+        current_parts = {
+            part["path"]: base64.b64decode(part["payload"]).decode("utf-8")
+            for part in current_definition["parts"] if part["path"].endswith(".tmdl")
+        }
+        # Preserve native object identities on update, including nested columns/properties.
+        declarations = ("table ", "column ", "partition ", "entity ", "property ",
+                        "expression ", "namespace ", "model ", "database")
+        for index, part in enumerate(parts):
+            tags, objects = {}, {}
+            for line in current_parts.get(part["path"], "").splitlines():
+                text = line.lstrip("\t")
+                depth = len(line) - len(text)
+                if text.startswith(declarations):
+                    objects[depth] = text
+                elif text.startswith("lineageTag: ") and depth - 1 in objects:
+                    tags[(depth - 1, objects[depth - 1])] = text
+            if not tags:
+                continue
+            lines, expression_tags = [], []
+            for line in base64.b64decode(part["payload"]).decode("utf-8").splitlines():
+                lines.append(line)
+                text = line.lstrip("\t")
+                depth = len(line) - len(text)
+                if (depth, text) in tags:
+                    tag = "\t" * (depth + 1) + tags[(depth, text)]
+                    if text.startswith("expression "):
+                        expression_tags.append(tag)
+                    else:
+                        lines.append(tag)
+            lines.extend(expression_tags)
+            parts[index] = create_tmdl_part(part["path"], "\n".join(lines) + "\n")
     return {"definition": {"parts": parts}}
 
 
@@ -973,13 +1006,21 @@ def verify_ontology_bindings(
             expected_table = [
                 f"table {table}", "mode: directLake", f"entityName: {table}",
                 "expressionSource: DatabaseQuery",
-                f"annotation ONT_WorkspaceId = {workspace_id}",
-                f"annotation ONT_ItemId = {lakehouse_id}",
-                "annotation ONT_ItemKind = Lakehouse",
-                f"annotation ONT_ItemName = {properties['displayName']}",
-                f"annotation ONT_SqlEndpoint = {endpoint['connectionString']}",
-                f"annotation ONT_SqlDatabase = {properties['displayName']}",
+                f"partition {table} = entity",
             ]
+            # Fabric can omit these UI annotations when serializing TMDL.
+            annotations = {
+                "ONT_WorkspaceId": workspace_id,
+                "ONT_ItemId": lakehouse_id,
+                "ONT_ItemKind": "Lakehouse",
+                "ONT_ItemName": properties["displayName"],
+                "ONT_SqlEndpoint": endpoint["connectionString"],
+                "ONT_SqlDatabase": properties["displayName"],
+            }
+            for name, value in annotations.items():
+                present = {line for line in table_lines if line.startswith(f"annotation {name} =")}
+                if present and present != {f"annotation {name} = {value}"}:
+                    raise RuntimeError(f"Ontology data binding was not persisted for {entity}: {name}.")
             expected_table.extend(f"column {column['source']}" for column in columns)
             expected_table.extend(f"sourceColumn: {column['source']}" for column in columns)
             if not all(value in entity_lines for value in expected_entity) or not all(
@@ -1081,7 +1122,7 @@ def update_ontology_definition(
     if is_tmdl_definition(current):
         platform = next(part for part in current["parts"] if part["path"] == ".platform")
         payload = build_zava_tmdl_definition(
-            workspace_id, get_lakehouse_properties(workspace_id, lakehouse_id), platform
+            workspace_id, get_lakehouse_properties(workspace_id, lakehouse_id), platform, current
         )
         log_message("Using new-experience TMDL ontology definition.")
     else:
@@ -1337,10 +1378,9 @@ def main():
                 ontology_success = False
                 log_message(f"  FAILED: Ontology setup failed ({type(e).__name__}: {e})")
                 log_message(
-                    "  This is often caused by the Fabric IQ Ontology feature not being "
-                    "available yet in this tenant/region. Lakehouse and tables were still "
-                    "created successfully. Part 3/5 (Fabric IQ) of the workshop may not "
-                    "work until this feature becomes available."
+                    "  Check the authentication, tenant settings and binding error above. "
+                    "Lakehouse and tables were created successfully. Reuse this workspace "
+                    "and any existing ontology when retrying setup."
                 )
         elif CREATE_ONTOLOGY:
             ontology_success = False

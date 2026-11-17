@@ -1,7 +1,7 @@
 ---
 title: 00. Azure 구독 배포
 duration_minutes:
-last_updated: 2026-10-21
+last_updated: 2026-11-17
 ---
 
 # 00. Azure 구독 배포
@@ -111,20 +111,6 @@ az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 
 <img src="assets/workiq-client-permissions.png" alt="로그인 앱의 access_as_user 권한과 관리자 동의" width="650"/>
 
-#### 노트북 연결 및 검증
-
-Part 4/6은 `2026-08-01-preview` API를 사용합니다. 필요한 SDK와 MSAL은 초기 환경 설정에서 설치됩니다. 배포 후 Part 1부터 순서대로 진행하고, Part 4의 시작 준비에서 Search 연결을 완료하세요. Part 6에서는 같은 설정을 재사용합니다.
-
-조회 결과에 `workIQ` 참조가 있고 활동 로그에 소스 오류가 없으면 성공입니다. 다른 소스의 답변만 나온 부분 응답은 성공으로 처리하지 않습니다.
-
-| 오류 | 확인할 곳 |
-|---|---|
-| `AI credits access is not configured for this user` | 2번의 결제 정책에서 Work IQ API, 사용자 포함 여부, 지출 한도 확인 |
-| 관리자 동의 또는 로그인 오류 | 3-2와 3-3의 위임 권한 및 관리자 동의 확인 |
-| 디바이스 코드 로그인 또는 환경 변수 자동 설정 오류 | 3-3의 로그인 앱에서 **Allow public client flows**가 **예**인지 확인. 테넌트 정책에서 차단하면 관리자에게 문의 |
-| Federated Credential 오류 | Part 4 시작 준비의 Search principal ID와 자격 증명 ID 확인 |
-| CLI의 `TokenCreatedWithOutdatedPolicies` | 대상 테넌트에 다시 로그인. 계속 실패하면 관리자에게 로그인 로그 확인 요청 |
-
 ### 필요한 Azure 권한
 
 
@@ -226,7 +212,7 @@ azd env set FABRIC_WORKSPACE_ID <이전 실행에서 확인한 워크스페이�
 azd hooks run postprovision
 ```
 
-`azd hooks run postprovision`은 인프라를 다시 배포하지 않고 postprovision 스크립트(인덱스/Fabric Lakehouse/Ontology 설정)만 재실행하므로 `azd up`을 처음부터 다시 돌리는 것보다 훨씬 빠릅니다.
+`azd hooks run postprovision`은 인프라를 다시 배포하지 않고 postprovision 스크립트(인덱스/Fabric Lakehouse/Ontology 설정)만 재실행합니다. 같은 배포의 `.env`에 기록된 Fabric Workspace ID와 Ontology ID는 유지됩니다.
 
 `ConnectionResetError`나 타임아웃으로 생성 응답을 받지 못해도 Fabric에는 Ontology가 이미 만들어졌을 수 있습니다. 최신 생성 스크립트는 연결 오류가 발생하면 같은 이름의 항목이 실제로 저장됐는지 확인하고 발견된 항목을 재사용합니다. 항목을 찾지 못하면 오류를 그대로 보고합니다. 수동 복구할 때도 포털에서 실제 항목을 먼저 확인하고 해당 ID를 `.env`의 `FABRIC_ONTOLOGY_ID`에 넣어 기존 항목 복구를 실행하세요. 테넌트 기능 설정 오류로 단정하거나 무조건 새 Ontology를 만들지 마세요.
 
@@ -240,7 +226,7 @@ azd hooks run postprovision
 
 `This ontology has no data sources bound to it yet`는 Ontology 항목 생성과 데이터 바인딩 완료가 서로 다르다는 뜻입니다. 새 경험 Ontology는 [TMDL 정의](https://learn.microsoft.com/rest/api/fabric/articles/item-management/definitions/ontology-definition)를 사용합니다. 구형 JSON 정의를 전송한 뒤 HTTP 성공만 확인하면 빈 Ontology가 남을 수 있습니다.
 
-새 경험의 Lakehouse 연결에는 OneLake 연결식과 Fabric 원본 식별 메타데이터가 필요합니다. SQL 연결식과 속성 매핑만 저장하면 엔터티 목록은 보여도 실제 조회는 실패할 수 있습니다. 포털에서 `The kind of Fabric item this data source points to couldn't be identified`가 나타난다면 `ONT_WorkspaceId`, `ONT_ItemId`, `ONT_ItemKind`와 SQL 원본 메타데이터가 누락된 바인딩인지 확인하세요. 복구 스크립트는 포털의 Lakehouse 연결 형식으로 정의를 생성하고 이 메타데이터까지 검증합니다. 복구 중에는 포털의 편집 화면을 닫아 저장되지 않은 변경이 API 업데이트를 덮어쓰지 않도록 합니다.
+Lakehouse 연결은 정확한 워크스페이스·Lakehouse를 가리키는 OneLake 연결식과 DirectLake 파티션, 엔터티 키, 열 매핑으로 검증합니다. Fabric이 `getDefinition` 응답에서 `ONT_*` 화면용 메타데이터를 생략할 수 있으며, 해당 메타데이터가 반환되면 원본과 일치하는지도 확인합니다. 포털에서 `The kind of Fabric item this data source points to couldn't be identified`가 나타나면 Lakehouse 연결과 실제 데이터 조회를 함께 확인하세요. 복구 중에는 포털의 편집 화면을 닫아 저장되지 않은 변경이 API 업데이트를 덮어쓰지 않도록 합니다.
 
 최신 코드를 받은 뒤 저장소 루트에서 다음을 실행하세요. `.env`의 `FABRIC_WORKSPACE_ID`와 `FABRIC_ONTOLOGY_ID`가 실패한 조회의 ID와 일치하는지 먼저 확인합니다.
 
@@ -267,6 +253,7 @@ Part 3 커널을 다시 시작하고 환경 변수 로드부터 실행하세요.
 Azure 리소스가 정상 생성돼도 외부 지식 소스의 인증과 사용자 권한이 자동으로 준비되는 것은 아닙니다.
 
 - Web IQ에서 `401 Unauthorized`와 `auth_invalid_api_key`가 나타나면 `.env`의 `WEB_IQ_KEY`를 유효한 키로 교체한 뒤 커널을 다시 시작하고 Web IQ 지식 소스 생성 셀부터 재실행하세요. 저장된 인증 헤더도 갱신해야 합니다. 뒤이어 나타나는 SSE `415 UnsupportedMediaType`는 대체 전송 시도의 오류이므로 먼저 키 인증 실패를 해결합니다.
+- Web IQ에서 `403`과 `auth_content_format_forbidden`이 나타나면 활동 로그의 `mcpServerArguments.toolArguments.contentFormat`을 확인하세요. 이 실습은 `passage` 형식과 `maxLength=3000`을 사용합니다. 지식 소스 설명과 지식 베이스 생성 셀을 실행해 호출 지침을 저장한 뒤 다시 질의하세요. `text`, `html`, `markdown`은 AppID의 권한에 따라 거부될 수 있습니다.
 - Work IQ에서 `AI credits access is not configured for this user`가 나타나면 Microsoft 365 관리자에게 **노트북에 로그인한 사용자**의 AI credits 사용 권한을 요청하세요. Azure 구독 로그인이나 Search 역할만으로 이 권한이 생기지는 않습니다.
 - Part 4의 예제 메일 생성은 별도의 Microsoft Graph `Mail.Send` 동의가 필요합니다. 메일 전송을 건너뛰었다면 실제 받은 편지함에서 검색할 수 있는 자료를 사용하고 예제 메일 생성까지 검증했다고 판단하지 마세요.
 
