@@ -1,5 +1,6 @@
 import copy
 import importlib.util
+import json
 import os
 from pathlib import Path
 import runpy
@@ -22,6 +23,96 @@ FIC = "44444444-4444-4444-4444-444444444444"
 SCOPE = "55555555-5555-5555-5555-555555555555"
 
 class SetupEnvironmentTests(unittest.TestCase):
+    def run_setup(self, root, overrides=None):
+        source = (ROOT / "infra" / "setup-env.py").read_text(encoding="utf-8")
+        environment = {
+            "AZURE_SEARCH_SERVICE_ENDPOINT": "https://original.search.windows.net",
+            "AZURE_OPENAI_ENDPOINT": "https://example.invalid",
+            "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "test-chat",
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT": "test-embedding",
+            "AZURE_TENANT_ID": TENANT,
+            "AZURE_SUBSCRIPTION_ID": TENANT,
+            "AZURE_RESOURCE_GROUP": "test-group",
+        }
+        environment.update(overrides or {})
+        with patch.dict(os.environ, environment, clear=True), patch("builtins.print"):
+            exec(compile(source, "setup-env.py", "exec"), {
+                "__file__": str(root / "infra" / "setup-env.py"),
+            })
+
+    def test_resource_group_lookup_writes_discovered_id_and_preserves_key(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / ".env"
+            path.write_text("WEB_IQ_KEY='test-secret'\nWEB_IQ_RESOURCE_ID=stale-id\n", encoding="utf-8")
+            resource_id = f"/subscriptions/{TENANT}/resourceGroups/test-group/providers/Microsoft.WebIQ/accounts/web"
+            with patch("shutil.which", return_value="az"), \
+                 patch("subprocess.run", return_value=Mock(
+                     returncode=0, stdout=json.dumps([resource_id]),
+                 )) as run:
+                self.run_setup(root, {"WEB_IQ_RESOURCE_ID": "stale-output"})
+            values = dotenv_values(path)
+            self.assertEqual(values["WEB_IQ_RESOURCE_ID"], resource_id)
+            self.assertEqual(values["WEB_IQ_KEY"], "test-secret")
+            command = run.call_args.args[0]
+            for flag, value in (
+                ("--subscription", TENANT), ("--resource-group", "test-group"),
+                ("--resource-type", "Microsoft.WebIQ/accounts"),
+            ):
+                self.assertEqual(command[command.index(flag) + 1], value)
+
+    def test_lookup_failures_do_not_overwrite_env(self):
+        cases = (
+            ([], 0, "az"),
+            (["first", "second"], 0, "az"),
+            ([None], 0, "az"),
+            ({"id": "unexpected-shape"}, 0, "az"),
+            ([], 1, "az"),
+            ([], 0, None),
+        )
+        for resource_ids, returncode, executable in cases:
+            with self.subTest(resources=resource_ids, returncode=returncode, executable=executable), \
+                 tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                path = root / ".env"
+                path.write_text("WEB_IQ_KEY='keep-this-key'\n", encoding="utf-8")
+                original = path.read_bytes()
+                with patch("shutil.which", return_value=executable), \
+                     patch("subprocess.run", return_value=Mock(
+                         returncode=returncode, stdout=json.dumps(resource_ids),
+                         stderr="AuthorizationFailed",
+                     )):
+                    with self.assertRaises((ValueError, RuntimeError)):
+                        self.run_setup(root)
+                self.assertEqual(path.read_bytes(), original)
+
+    def test_disabled_web_iq_does_not_query_resources(self):
+        with tempfile.TemporaryDirectory() as directory, patch("subprocess.run") as run:
+            root = Path(directory)
+            self.run_setup(root, {"DEPLOY_WEB_IQ": "false", "WEB_IQ_RESOURCE_ID": "stale-id"})
+            self.assertEqual(dotenv_values(root / ".env")["WEB_IQ_RESOURCE_ID"], "")
+            run.assert_not_called()
+
+    def test_deployment_output_is_used_when_group_context_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as directory, patch("subprocess.run") as run:
+            root = Path(directory)
+            self.run_setup(root, {
+                "AZURE_RESOURCE_GROUP": "", "WEB_IQ_RESOURCE_ID": "deployment-output",
+            })
+            self.assertEqual(dotenv_values(root / ".env")["WEB_IQ_RESOURCE_ID"], "deployment-output")
+            run.assert_not_called()
+
+    def test_missing_scope_fails_without_using_cli_default_subscription(self):
+        with tempfile.TemporaryDirectory() as directory, patch("subprocess.run") as run:
+            root = Path(directory)
+            path = root / ".env"
+            path.write_text("WEB_IQ_KEY=keep-this-key\n", encoding="utf-8")
+            original = path.read_bytes()
+            with self.assertRaisesRegex(ValueError, "AZURE_RESOURCE_GROUP"):
+                self.run_setup(root, {"AZURE_SUBSCRIPTION_ID": ""})
+            run.assert_not_called()
+            self.assertEqual(path.read_bytes(), original)
+
     def test_retry_preserves_fabric_ids_only_for_same_deployment(self):
         source = (ROOT / "infra" / "setup-env.py").read_text(encoding="utf-8")
         for same_deployment in (True, False):
@@ -45,6 +136,7 @@ class SetupEnvironmentTests(unittest.TestCase):
                     "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "test-chat",
                     "AZURE_OPENAI_EMBEDDING_DEPLOYMENT": "test-embedding",
                     "AZURE_TENANT_ID": TENANT,
+                    "WEB_IQ_RESOURCE_ID": "test-web-resource",
                 }
                 with patch.dict(os.environ, environment, clear=True), patch("builtins.print") as output:
                     exec(compile(source, "setup-env.py", "exec"), {
@@ -233,11 +325,12 @@ class ConfigureWorkIQTests(unittest.TestCase):
             env = {k: "test" for k in (
                 "AZURE_SEARCH_SERVICE_ENDPOINT", "AZURE_OPENAI_ENDPOINT",
                 "AZURE_OPENAI_CHATGPT_DEPLOYMENT", "AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "AZURE_TENANT_ID",
+                "WEB_IQ_RESOURCE_ID",
             )}
             script = root / "infra" / "setup-env.py"
             script.parent.mkdir()
             script.write_text(source, encoding="utf-8")
-            with patch.dict("os.environ", env), patch("builtins.print"):
+            with patch.dict("os.environ", env, clear=True), patch("builtins.print"):
                 runpy.run_path(str(script))
             saved = dotenv_values(path)
             for key, value in settings.items():
