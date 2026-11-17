@@ -188,7 +188,7 @@ azd up
 
 > **참고:** 배포 과정에서는 데모 이메일을 보내지 않습니다. Part 4의 이메일 준비 셀에서 본인의 Microsoft 365 계정으로 로그인하고 Microsoft Graph의 `User.Read`와 `Mail.Send` 위임 권한에 동의해 데모 이메일 3통을 본인 메일함으로 보냅니다. 테넌트 정책에 따라 관리자 동의가 필요할 수 있습니다.
 
-#### azd up 진행 중 Fabric IQ Ontology 기능 활성화
+#### 3. azd up 진행 중 Fabric IQ Ontology 기능 활성화
 
 `azd up`이 AI Search/Fabric 용량을 프로비저닝하는 약 20분 동안, **아래 설정을 미리 켜두어야** postprovision 단계에서 Fabric IQ Ontology 생성이 실패하지 않습니다.
 
@@ -268,7 +268,7 @@ Part 2, Part 4, Part 5, Part 6은 소스 활동에 오류가 있거나 필요한
 
 <a id="web-iq-key"></a>
 
-#### azd up 완료 후 Web IQ API 키 발급
+#### 4. azd up 완료 후 Web IQ API 키 발급
 
 `azd up`은 구독에 Web IQ 계정 리소스도 함께 만들고, 리소스 ID를 저장소 루트 `.env`의 `WEB_IQ_RESOURCE_ID`에 기록합니다.
 

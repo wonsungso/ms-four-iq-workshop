@@ -6,9 +6,55 @@ Azure AI Search and Azure OpenAI (via Search's managed identity for vectorizers)
 using DefaultAzureCredential, relying on the RBAC role assignments granted in
 main.bicep. A user-provided Web IQ key is preserved locally across retries.
 """
+import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 from dotenv import dotenv_values, set_key
+
+
+def resolve_web_iq_resource_id():
+    if os.environ.get("DEPLOY_WEB_IQ", "true").strip().lower() == "false":
+        return ""
+    resource_group = os.environ.get("AZURE_RESOURCE_GROUP", "").strip()
+    subscription = os.environ.get("AZURE_SUBSCRIPTION_ID", "").strip()
+    if not resource_group or not subscription:
+        resource_id = os.environ.get("WEB_IQ_RESOURCE_ID", "").strip()
+        if resource_id:
+            return resource_id
+        raise ValueError(
+            "Web IQ 조회에 AZURE_RESOURCE_GROUP과 AZURE_SUBSCRIPTION_ID가 필요합니다. "
+            "배포할 azd 환경에서 postprovision을 실행하세요."
+        )
+    executable = shutil.which("az")
+    if not executable:
+        raise RuntimeError("Azure CLI가 없습니다. Codespaces를 사용하거나 Azure CLI를 설치하세요.")
+    result = subprocess.run(
+        [
+            executable, "resource", "list",
+            "--subscription", subscription, "--resource-group", resource_group,
+            "--resource-type", "Microsoft.WebIQ/accounts",
+            "--query", "[].id", "--output", "json",
+        ],
+        capture_output=True, text=True, encoding="utf-8", check=False, timeout=90,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Web IQ 리소스 조회 실패: {result.stderr.strip()}")
+    resource_ids = json.loads(result.stdout)
+    if not isinstance(resource_ids, list) or any(
+        not isinstance(value, str) or not value.strip() for value in resource_ids
+    ):
+        raise ValueError("Azure CLI의 Web IQ 리소스 ID 응답이 올바르지 않습니다.")
+    if len(resource_ids) != 1:
+        raise ValueError(
+            f"리소스 그룹 {resource_group!r}에 Web IQ 계정이 정확히 1개 필요하지만 "
+            f"{len(resource_ids)}개를 찾았습니다. 배포 상태와 대상 구독을 확인하세요."
+        )
+    return resource_ids[0]
+
+
+web_iq_resource_id = resolve_web_iq_resource_id()
 
 # Preserve a real WEB_IQ_KEY across re-runs (this script rewrites .env from
 # scratch every time postprovision runs, so a manually-added key would
@@ -54,7 +100,7 @@ FABRIC_ONTOLOGY_ID={fabric_settings['FABRIC_ONTOLOGY_ID']}
 # Connect WEB_IQ_RESOURCE_ID in the Web IQ Developer Portal (https://webiq.microsoft.ai)
 # to create an API key, then replace WEB_IQ_KEY with that key to use Part 2's
 # Web IQ knowledge source.
-WEB_IQ_RESOURCE_ID={os.environ.get('WEB_IQ_RESOURCE_ID', '')}
+WEB_IQ_RESOURCE_ID={web_iq_resource_id}
 """,
     encoding="utf-8",
 )
