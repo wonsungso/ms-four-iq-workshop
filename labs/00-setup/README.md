@@ -145,12 +145,17 @@ az ad sp create --id fdcc1f02-fc51-4226-8753-f668596af7f7
 - 컨테이너가 빌드되는 동안 잠시 기다립니다. 실습에 필요한 SDK(`azure-search-documents==12.1.0b2`)와 패키지가 자동으로 설치됩니다.
 - Codespace가 열리면 VS Code 웹 또는 데스크톱 앱에서 Terminal을 엽니다(Terminal > New Terminal)
 
-#### 2. azd로 배포
+#### 2. az login 및 azd로 배포
+
+Azure CLI와 Azure Developer CLI(`azd`)는 로그인 정보를 별도로 관리합니다. 아래 두 로그인 명령을 모두 실행하고, 배포에 사용할 같은 계정과 테넌트로 로그인하세요. Azure CLI 로그인은 리소스 공급자 등록과 postprovision의 서비스 인증에 사용합니다.
 
 ```bash
+az login --use-device-code
 azd auth login --use-device-code
 azd env set FABRIC_ADMIN_UPN <실제-로그인한-구독-이메일-주소>
 ```
+
+`az login`에서 선택한 구독과 `azd up`에서 선택할 구독을 일치시키세요. Azure CLI의 구독을 변경하려면 `az account set --subscription "<사용할 구독 이름 또는 ID>"`를 실행합니다.
 
 다음 환경 설정 값을 입력합니다.
 
@@ -326,7 +331,7 @@ python -m pip install -r workshop-support/requirements.txt
 
 #### 3. azd로 배포 및 워크샵 시작
 
-위 [빠른 시작 (GitHub Codespaces, 권장)](#빠른-시작-github-codespaces-권장)의 2~3단계와 동일하게 `azd auth login`, `azd up`을 실행한 뒤 노트북을 시작하세요.
+위 [빠른 시작 (GitHub Codespaces, 권장)](#빠른-시작-github-codespaces-권장)의 2~3단계와 동일하게 `az login --use-device-code`, `azd auth login --use-device-code`, `azd up`을 실행한 뒤 노트북을 시작하세요. 두 로그인은 같은 계정과 테넌트를 사용하고, Azure CLI와 `azd up`에서 같은 구독을 선택합니다.
 
 </details>
 
